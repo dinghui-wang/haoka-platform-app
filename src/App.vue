@@ -1,0 +1,22 @@
+<script setup>
+import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
+
+onLaunch(() => {
+  console.log('App Launch')
+})
+
+onShow(() => {
+  console.log('App Show')
+})
+
+onHide(() => {
+  console.log('App Hide')
+})
+</script>
+
+<style>
+/* 全局样式：PC端显示手机容器背景 */
+page {
+  background: #E8EAED;
+}
+</style>
