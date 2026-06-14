@@ -69,12 +69,20 @@ const currentTabbar = ref(0)
 const tabbarItems = ref([
   { icon: '🏠', text: '店铺首页' },
   { icon: '📋', text: '订单查询' },
-  { icon: '👤', text: '北京号卡' },
+  { icon: '👤', text: '本地号卡' },
   { icon: '🎧', text: '在线客服' },
 ])
 
 function switchTab(index) {
-  currentTabbar.value = index
+  if (index === 0) {
+    currentTabbar.value = index
+  } else if (index === 1) {
+    uni.redirectTo({ url: '/pages/order/index' })
+  } else if (index === 2) {
+    uni.redirectTo({ url: '/pages/local-card/index' })
+  } else if (index === 3) {
+    uni.redirectTo({ url: '/pages/customer-service/index' })
+  }
 }
 </script>
 
