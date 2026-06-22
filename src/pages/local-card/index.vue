@@ -290,15 +290,16 @@ function formatSoldCount(count) {
 /* 号卡列表 */
 .card-list {
     flex: 1;
+    width: 100%;
+    box-sizing: border-box;
     padding: 0 20rpx 140rpx;
+    overflow-x: hidden;
 }
 
 .card-wrapper {
     display: flex;
     flex-direction: column;
     gap: 20rpx;
-    width: 100%;
-    box-sizing: border-box;
 }
 
 .local-card {
