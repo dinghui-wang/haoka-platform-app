@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { getProductList, CARRIER_MAP } from '@/api/product.js'
 
-// 功能入口数据
+// ========== 功能入口 ==========
 const features = ref([
   { icon: '🏷️', name: '6月推荐', sub: '热门套餐', bgColor: 'linear-gradient(135deg, #FFB347, #FFCC80)' },
   { icon: '📱', name: '大流量卡', sub: '192G号卡', bgColor: 'linear-gradient(135deg, #4A9FF5, #81C4FF)' },
@@ -9,62 +10,185 @@ const features = ref([
   { icon: '🔗', name: '分享店铺', sub: '终身号卡服务', bgColor: 'linear-gradient(135deg, #FF9966, #FFBB80)' },
 ])
 
-// 推荐卡片区
-const recommendCards = ref([
-  {
-    badge: 'HOT!', badgeColor: '#FF6B00',
-    operator: '中国联通', operatorName: '联通随心卡',
-    data: '150', price: '29', priceUnit: '元',
-    tag: '联通随心卡29元', age: '18-28岁可申请',
-    bgColor: 'linear-gradient(180deg, #FFF5EB 0%, #FFE8D6 100%)',
-    dataColor: '#E85D04', logoBg: '#E85D04',
-    tagBg: '#FFF0E0', tagColor: '#E85D04'
-  },
-  {
-    badge: 'HOT!', badgeColor: '#FF3333',
-    operator: '中国广电', operatorName: '广电动升卡',
-    data: '222', price: '29', priceUnit: '元',
-    tag: '广电升幅卡29元', age: '18-65岁可申请',
-    bgColor: 'linear-gradient(180deg, #F5F0FF 0%, #EDE4FF 100%)',
-    dataColor: '#6B21A8', logoBg: '#6B21A8',
-    tagBg: '#F0E6FF', tagColor: '#6B21A8'
-  },
-  {
-    badge: 'HC', badgeColor: '#FF6B00',
-    operator: '中国移动', operatorName: '移动超值卡',
-    data: '135', price: '29', priceUnit: '元',
-    tag: '联通超值卡29元', age: '18-28岁可申请',
-    bgColor: 'linear-gradient(180deg, #FFF5EB 0%, #FFE8D6 100%)',
-    dataColor: '#E85D04', logoBg: '#E85D04',
-    tagBg: '#FFF0E0', tagColor: '#E85D04'
-  },
-])
+// ========== 推荐卡片（从商品列表取前3条） ==========
+const recommendCards = ref([])
 
-// 分类标签
+// 运营商颜色配置
+const OPERATOR_THEME = {
+  1: { badgeColor: '#FF6B00', dataColor: '#E85D04', logoBg: '#E85D04', tagBg: '#FFF0E0', tagColor: '#E85D04', bgGradient: 'linear-gradient(180deg, #FFF5EB 0%, #FFE8D6 100%)' },
+  2: { badgeColor: '#FF6B00', dataColor: '#E85D04', logoBg: '#E85D04', tagBg: '#FFF0E0', tagColor: '#E85D04', bgGradient: 'linear-gradient(180deg, #FFF5EB 0%, #FFE8D6 100%)' },
+  3: { badgeColor: '#FF3333', dataColor: '#D32F2F', logoBg: '#D32F2F', tagBg: '#FFE8E8', tagColor: '#D32F2F', bgGradient: 'linear-gradient(180deg, #FFE8E8 0%, #FFD6D6 100%)' },
+  4: { badgeColor: '#FF3333', dataColor: '#6B21A8', logoBg: '#6B21A8', tagBg: '#F0E6FF', tagColor: '#6B21A8', bgGradient: 'linear-gradient(180deg, #F5F0FF 0%, #EDE4FF 100%)' },
+}
+
+// ========== 分类标签 ==========
 const categoryTabs = ref([
-  { name: '精选', sub: '猜您喜欢' },
-  { name: '联通', sub: '高速流量' },
-  { name: '移动', sub: '黄金速率' },
-  { name: '电信', sub: '爆款热销' },
-  { name: '广电', sub: '超大流量' },
+  { name: '精选', sub: '猜您喜欢', carrier: null },
+  { name: '联通', sub: '高速流量', carrier: 2 },
+  { name: '移动', sub: '黄金速率', carrier: 1 },
+  { name: '电信', sub: '爆款热销', carrier: 3 },
+  { name: '广电', sub: '超大流量', carrier: 4 },
 ])
 const currentTab = ref(0)
 
-// 商品列表
-const products = ref([
-  {
-    operatorShort: '中国联通',
-    data: '150',
-    detail: '150G通用流量+200分钟通话',
-    title: '联通随心卡29元150G+200分钟+会员【发全国】充激活充值后发货',
-    tag1: '随机归属地',
-    tag2: '18-28岁可申请',
-    hot: true,
-    metas: ['长期套餐', '本激活本机后发货', '自主激活']
-  }
-])
+// ========== 商品列表 ==========
+const products = ref([])
+const loading = ref(false)
+const total = ref(0)
+const page = ref(1)
+const pageSize = ref(10)
 
-// TabBar
+// 将接口数据转换为推荐卡片格式
+function transformToRecommendCard(item) {
+  const carrier = item.detail?.carrier || 0
+  const theme = OPERATOR_THEME[carrier] || OPERATOR_THEME[2]
+  return {
+    id: item.out_product_id,
+    badge: 'HOT!',
+    badgeColor: theme.badgeColor,
+    operator: CARRIER_MAP[carrier] || '未知',
+    operatorName: item.name?.split(/(\d+元)/)?.[0]?.replace(/[\u2700-\u27BF\uE000-\uF8FF]|[\uD83C-\uDBFF][\uDC00-\uDFFF]|[\u2011-\u26FF]/g, '').trim() || '号卡',
+    data: String(item.detail?.general_traffic || 0),
+    price: String(item.detail?.current_monthly || 0),
+    priceUnit: '元',
+    tag: (item.detail?.general_traffic || '') + 'G流量 ' + (item.detail?.current_monthly || '') + '元/月',
+    age: (item.detail?.min_age || 18) + '-' + (item.detail?.max_age || 65) + '岁可申请',
+    bgColor: theme.bgGradient,
+    dataColor: theme.dataColor,
+    logoBg: theme.logoBg,
+    tagBg: theme.tagBg,
+    tagColor: theme.tagColor,
+  }
+}
+
+// 将接口数据转换为商品列表格式
+function transformToProduct(item) {
+  const carrier = item.detail?.carrier || 0
+  const d = item.detail || {}
+  const ageRange = d.min_age && d.max_age ? `${d.min_age}-${d.max_age}岁` : ''
+  const tags = []
+  if (d.general_traffic) tags.push(`${d.general_traffic}G流量`)
+  if (d.voice_minutes) tags.push(`${d.voice_minutes}分钟`)
+  if (d.recharge_desc) tags.push(d.recharge_desc)
+
+  return {
+    id: item.out_product_id,
+    out_product_id: item.out_product_id,
+    main_image: item.main_image,
+    main_link: item.main_link,
+    name: item.name,
+    carrier,
+    operatorShort: CARRIER_MAP[carrier] || '未知',
+    data: String(d.general_traffic || 0),
+    detail: `${d.general_traffic || 0}G通用流量${d.voice_minutes ? '+' + d.voice_minutes + '分钟通话' : ''}`,
+    title: item.name,
+    price: d.current_monthly || 0,
+    originalPrice: d.origin_monthly || 0,
+    commission: d.commission || 0,
+    ageRange,
+    tag1: ageRange,
+    tag2: d.recharge_desc ? d.recharge_desc.slice(0, 15) : '',
+    hot: d.commission >= 100,
+    metas: [
+      d.is_need_idcard ? '需身份证' : '自主激活',
+      d.topup_amount ? `首充${d.topup_amount}元` : '',
+      d.delivery_type === 'prohibitShipping' ? '禁止转寄' : '全国发货',
+    ].filter(Boolean),
+    detailObj: d,
+  }
+}
+
+// 获取商品列表
+async function fetchProducts(reset = false) {
+  if (reset) {
+    page.value = 1
+    products.value = []
+  }
+  loading.value = true
+  try {
+    const carrier = categoryTabs.value[currentTab.value].carrier
+    const res = await getProductList({
+      page: page.value,
+      pageSize: pageSize.value,
+      ...(carrier ? { category: carrier } : {}),
+    })
+
+    // 调试：打印接口返回的完整数据
+    console.log('接口返回 res =', res)
+
+    // 兼容多种返回格式：
+    // 1. { list: [...] }
+    // 2. { data: { list: [...] } }
+    // 3. { data: [...] }
+    // 4. { code: 0, data: { list: [...] } }
+    // 5. [...] 直接是数组
+    let list = []
+    let totalVal = 0
+    if (Array.isArray(res)) {
+      list = res
+    } else if (res?.list) {
+      list = res.list
+      totalVal = res.total || 0
+    } else if (res?.data?.list) {
+      list = res.data.list
+      totalVal = res.data.total || 0
+    } else if (Array.isArray(res?.data)) {
+      list = res.data
+    } else {
+      list = []
+    }
+
+    console.log('解析出 list =', list, '数量:', list.length)
+
+    const transformed = list.map(item => transformToProduct(item))
+
+    if (reset) {
+      products.value = transformed
+    } else {
+      products.value.push(...transformed)
+    }
+    total.value = totalVal || transformed.length
+
+    // 推荐卡片取前3条
+    if (reset && transformed.length > 0) {
+      recommendCards.value = list.slice(0, 3).map(item => transformToRecommendCard(item))
+    }
+  } catch (e) {
+    console.error('获取商品列表失败', e)
+    uni.showToast({ title: '加载失败，请重试', icon: 'none' })
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载更多
+function loadMore() {
+  if (loading.value) return
+  if (products.value.length >= total.value && total.value > 0) return
+  page.value++
+  fetchProducts()
+}
+
+// 切换分类
+function switchCategory(index) {
+  if (currentTab.value === index) return
+  currentTab.value = index
+  fetchProducts(true)
+}
+
+// 跳转商品详情（跳外链）
+function goDetail(product) {
+  if (product.main_link) {
+    // #ifdef H5
+    window.open(product.main_link)
+    // #endif
+    // #ifdef MP-WEIXIN || APP-PLUS
+    uni.navigateTo({ url: `/pages/webview/index?url=${encodeURIComponent(product.main_link)}` })
+    // #endif
+  }
+}
+
+// ========== TabBar ==========
 const currentTabbar = ref(0)
 const tabbarItems = ref([
   { icon: '🏠', text: '店铺首页' },
@@ -84,6 +208,10 @@ function switchTab(index) {
     uni.redirectTo({ url: '/pages/customer-service/index' })
   }
 }
+
+onMounted(() => {
+  fetchProducts(true)
+})
 </script>
 
 <template>
@@ -91,7 +219,6 @@ function switchTab(index) {
     <!-- 顶部蓝色背景区域 -->
     <view class="header-bg">
       <view class="header-content">
-        <!-- 标题 -->
         <view class="title-wrapper">
           <view class="title-decoration left">
             <text class="deco-text">❧</text>
@@ -103,7 +230,6 @@ function switchTab(index) {
         </view>
         <text class="sub-title">精选套餐·号卡大全·畅销正品</text>
 
-        <!-- 装饰元素 -->
         <view class="decoration-phone">
           <view class="phone-icon">
             <view class="phone-screen"></view>
@@ -114,22 +240,18 @@ function switchTab(index) {
           <text class="wifi-icon">📶</text>
         </view>
       </view>
-
-      <!-- 蓝色波浪底部 -->
       <view class="wave-bottom"></view>
     </view>
 
     <!-- 主要内容区 -->
-    <scroll-view scroll-y :show-scrollbar="false" class="main-content">
+    <scroll-view scroll-y :show-scrollbar="false" class="main-content" @scrolltolower="loadMore">
       <!-- 5G办理中心卡片 -->
       <view class="center-card">
         <view class="center-header">
           <view class="center-logo">
             <view class="logo-inner">
               <text class="logo-text-5g">5G</text>
-              <view class="logo-wifi">
-                <text>)))</text>
-              </view>
+              <view class="logo-wifi"><text>)))</text></view>
             </view>
           </view>
           <view class="center-info">
@@ -137,8 +259,6 @@ function switchTab(index) {
             <text class="center-desc">四大运营商授权 官方正品保障</text>
           </view>
         </view>
-
-        <!-- 四个功能入口 -->
         <view class="feature-grid">
           <view class="feature-item" v-for="(item, index) in features" :key="index">
             <view class="feature-icon" :style="{ background: item.bgColor }">
@@ -151,15 +271,15 @@ function switchTab(index) {
       </view>
 
       <!-- 人气推荐区域 -->
-      <view class="recommend-section">
+      <view class="recommend-section" v-if="recommendCards.length">
         <view class="section-header">
           <view class="recommend-tag">
             <text class="tag-main">人气</text>
             <text class="tag-sub">推荐</text>
           </view>
-          <view class="card-list">
+          <scroll-view scroll-x class="card-list">
             <view class="sim-card" v-for="(card, index) in recommendCards" :key="index"
-              :style="{ background: card.bgColor }">
+              :style="{ background: card.bgColor }" @click="goDetail({ main_link: '' })">
               <view class="card-badge" :style="{ background: card.badgeColor }">
                 <text class="badge-text">{{ card.badge }}</text>
               </view>
@@ -176,22 +296,20 @@ function switchTab(index) {
                 <text class="card-age">{{ card.age }}</text>
               </view>
             </view>
-          </view>
+          </scroll-view>
         </view>
       </view>
 
       <!-- 通知提示条 -->
       <view class="notice-bar">
-        <view class="notice-icon">
-          <text>🔊</text>
-        </view>
+        <view class="notice-icon"><text>🔊</text></view>
         <text class="notice-text">严禁省内产品转寄省外通知</text>
       </view>
 
       <!-- 分类标签栏 -->
       <view class="category-tabs">
         <view class="tab-item" v-for="(tab, index) in categoryTabs" :key="index"
-          :class="{ active: currentTab === index }" @click="currentTab = index">
+          :class="{ active: currentTab === index }" @click="switchCategory(index)">
           <text class="tab-name" :class="{ active: currentTab === index }">{{ tab.name }}</text>
           <text class="tab-sub">{{ tab.sub }}</text>
         </view>
@@ -200,7 +318,7 @@ function switchTab(index) {
       <!-- 搜索栏和筛选 -->
       <view class="search-filter-bar">
         <view class="search-box">
-          <text class="search-placeholder">商品名称、运营商</text>
+          <text class="search-placeholder">商品名称</text>
           <text class="search-icon">🔍</text>
         </view>
         <view class="filter-btns">
@@ -211,22 +329,45 @@ function switchTab(index) {
 
       <!-- 商品列表 -->
       <view class="product-list">
-        <view class="product-card" v-for="(product, index) in products" :key="index">
+        <!-- 加载中（首次） -->
+        <view v-if="loading && products.length === 0" class="product-loading">
+          <text class="loading-text">加载中...</text>
+        </view>
+
+        <!-- 商品卡片 -->
+        <view class="product-card" v-for="(product, index) in products" :key="product.id || index"
+          @click="goDetail(product)">
+          <!-- 左侧：号卡样式 -->
           <view class="product-left">
-            <view class="product-sim-card">
+            <view class="product-sim-card" :style="{
+              background: product.carrier === 4 ? 'linear-gradient(135deg, #F3E8FF, #E9D5FF)' :
+                           product.carrier === 3 ? 'linear-gradient(135deg, #FEE2E2, #FECACA)' :
+                           product.carrier === 1 ? 'linear-gradient(135deg, #DBEAFE, #BFDBFE)' :
+                           'linear-gradient(135deg, #FFEFED, #FFDAD5)',
+              borderColor: product.carrier === 4 ? '#C084FC' :
+                           product.carrier === 3 ? '#F87171' :
+                           product.carrier === 1 ? '#60A5FA' : '#FFCCC7'
+            }">
               <view class="sim-chip"></view>
-              <view class="sim-operator">
+              <view class="sim-operator" :style="{ color: product.carrier === 4 ? '#7C3AED' : product.carrier === 3 ? '#DC2626' : product.carrier === 1 ? '#2563EB' : '#C41E3A' }">
                 <text>{{ product.operatorShort }}</text>
               </view>
-              <text class="sim-data">{{ product.data }}G</text>
+              <text class="sim-data" :style="{ color: product.carrier === 4 ? '#7C3AED' : product.carrier === 3 ? '#DC2626' : product.carrier === 1 ? '#2563EB' : '#C41E3A' }">{{ product.data }}G</text>
               <text class="sim-detail">{{ product.detail }}</text>
             </view>
           </view>
+
+          <!-- 右侧：商品信息 -->
           <view class="product-right">
             <view class="product-hot" v-if="product.hot">
               <text>🔥</text>
             </view>
             <text class="product-title">{{ product.title }}</text>
+            <view class="product-price-row">
+              <text class="product-price">{{ product.price }}</text>
+              <text class="product-price-unit">元/月</text>
+              <text class="product-original-price" v-if="product.originalPrice > product.price">¥{{ product.originalPrice }}/月</text>
+            </view>
             <view class="product-tags">
               <text class="tag-orange" v-if="product.tag1">{{ product.tag1 }}</text>
               <text class="tag-green" v-if="product.tag2">{{ product.tag2 }}</text>
@@ -234,7 +375,25 @@ function switchTab(index) {
             <view class="product-meta">
               <text class="meta-item" v-for="(meta, i) in product.metas" :key="i">{{ meta }}</text>
             </view>
+            <view class="product-commission" v-if="product.commission">
+              <text class="commission-text">佣金 ¥{{ product.commission }}</text>
+            </view>
           </view>
+        </view>
+
+        <!-- 加载更多 -->
+        <view v-if="loading && products.length > 0" class="product-loading">
+          <text class="loading-text">加载更多...</text>
+        </view>
+
+        <!-- 没有更多 -->
+        <view v-if="!loading && products.length > 0 && products.length >= total" class="product-empty">
+          <text class="empty-text">— 已经到底了 —</text>
+        </view>
+
+        <!-- 空状态 -->
+        <view v-if="!loading && products.length === 0" class="product-empty">
+          <text class="empty-text">暂无商品，请稍后再来～</text>
         </view>
       </view>
 
@@ -242,7 +401,7 @@ function switchTab(index) {
       <view class="bottom-placeholder"></view>
     </scroll-view>
 
-    <!-- 底部导航栏 (自定义覆盖) -->
+    <!-- 底部导航栏 -->
     <view class="custom-tabbar">
       <view class="tabbar-item" v-for="(tab, index) in tabbarItems" :key="index"
         :class="{ active: currentTabbar === index }" @click="switchTab(index)">
@@ -263,7 +422,6 @@ function switchTab(index) {
   height: 100vh;
   overflow: hidden;
 
-  /* PC端模拟手机效果 */
   @media (min-width: 551px) {
     box-shadow: 0 0 40rpx rgba(0, 0, 0, 0.1);
     border-radius: 20rpx;
@@ -325,7 +483,6 @@ function switchTab(index) {
   margin-right: auto;
 }
 
-/* 手机装饰 */
 .decoration-phone {
   position: absolute;
   left: 40rpx;
@@ -357,7 +514,6 @@ function switchTab(index) {
   margin: 8rpx auto 0;
 }
 
-/* WiFi装饰 */
 .decoration-wifi {
   position: absolute;
   right: 50rpx;
@@ -369,7 +525,6 @@ function switchTab(index) {
   font-size: 56rpx;
 }
 
-/* 波浪底 */
 .wave-bottom {
   position: absolute;
   bottom: 0;
@@ -535,6 +690,7 @@ function switchTab(index) {
   display: flex;
   gap: 16rpx;
   overflow-x: auto;
+  white-space: nowrap;
 
   &::-webkit-scrollbar {
     display: none;
@@ -750,7 +906,6 @@ function switchTab(index) {
 .product-sim-card {
   width: 160rpx;
   height: 180rpx;
-  background: linear-gradient(135deg, #FFEFED, #FFDAD5);
   border-radius: 16rpx;
   padding: 16rpx;
   position: relative;
@@ -770,7 +925,6 @@ function switchTab(index) {
 
 .sim-operator {
   font-size: 18rpx;
-  color: #C41E3A;
   font-weight: bold;
   margin-bottom: 8rpx;
 }
@@ -778,7 +932,6 @@ function switchTab(index) {
 .sim-data {
   font-size: 52rpx;
   font-weight: 900;
-  color: #C41E3A;
   line-height: 1;
 }
 
@@ -808,7 +961,6 @@ function switchTab(index) {
   font-weight: 600;
   line-height: 1.5;
   display: -webkit-box;
-  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -816,10 +968,36 @@ function switchTab(index) {
   padding-right: 40rpx;
 }
 
+.product-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6rpx;
+  margin-top: 12rpx;
+}
+
+.product-price {
+  font-size: 40rpx;
+  font-weight: 900;
+  color: #FF4D4F;
+}
+
+.product-price-unit {
+  font-size: 22rpx;
+  color: #FF4D4F;
+  font-weight: 600;
+}
+
+.product-original-price {
+  font-size: 22rpx;
+  color: #BBBBBB;
+  text-decoration: line-through;
+  margin-left: 8rpx;
+}
+
 .product-tags {
   display: flex;
   gap: 12rpx;
-  margin-top: 16rpx;
+  margin-top: 12rpx;
   flex-wrap: wrap;
 }
 
@@ -842,7 +1020,7 @@ function switchTab(index) {
 .product-meta {
   display: flex;
   gap: 16rpx;
-  margin-top: 16rpx;
+  margin-top: 12rpx;
   flex-wrap: wrap;
 }
 
@@ -850,6 +1028,39 @@ function switchTab(index) {
   font-size: 22rpx;
   color: #AAAAAA;
   padding: 4rpx 0;
+}
+
+.product-commission {
+  margin-top: 8rpx;
+}
+
+.commission-text {
+  font-size: 22rpx;
+  color: #FF4D4F;
+  font-weight: 600;
+  background: #FFF1F0;
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+}
+
+/* ====== 加载/空状态/到底 ====== */
+.product-loading,
+.product-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0;
+  background: transparent;
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #BBBBBB;
 }
 
 /* ====== 底部占位 ====== */
