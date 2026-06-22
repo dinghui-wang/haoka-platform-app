@@ -38,26 +38,30 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
 
+// 搜索关键词
+const keyword = ref('')
+let searchTimer = null
+
 // 将接口数据转换为推荐卡片格式
 function transformToRecommendCard(item) {
   const carrier = item.detail?.carrier || 0
   const theme = OPERATOR_THEME[carrier] || OPERATOR_THEME[2]
+  const d = item.detail || {}
+  const ageRange = d.min_age && d.max_age ? `${d.min_age}-${d.max_age}岁可申请` : ''
   return {
     id: item.out_product_id,
-    badge: 'HOT!',
-    badgeColor: theme.badgeColor,
+    main_image: item.main_image,
+    main_link: item.main_link,
     operator: CARRIER_MAP[carrier] || '未知',
     operatorName: item.name?.split(/(\d+元)/)?.[0]?.replace(/[\u2700-\u27BF\uE000-\uF8FF]|[\uD83C-\uDBFF][\uDC00-\uDFFF]|[\u2011-\u26FF]/g, '').trim() || '号卡',
     data: String(item.detail?.general_traffic || 0),
     price: String(item.detail?.current_monthly || 0),
-    priceUnit: '元',
-    tag: (item.detail?.general_traffic || '') + 'G流量 ' + (item.detail?.current_monthly || '') + '元/月',
-    age: (item.detail?.min_age || 18) + '-' + (item.detail?.max_age || 65) + '岁可申请',
+    name: item.name,
+    badgeColor: theme.badgeColor,
     bgColor: theme.bgGradient,
     dataColor: theme.dataColor,
     logoBg: theme.logoBg,
-    tagBg: theme.tagBg,
-    tagColor: theme.tagColor,
+    ageRange,
   }
 }
 
@@ -109,8 +113,9 @@ async function fetchProducts(reset = false) {
     const carrier = categoryTabs.value[currentTab.value].carrier
     const res = await getProductList({
       page: page.value,
-      pageSize: pageSize.value,
-      ...(carrier ? { category: carrier } : {}),
+      page_size: pageSize.value,
+      ...(carrier ? { carrier } : {}),
+      ...(keyword.value.trim() ? { name: keyword.value.trim() } : {}),
     })
 
     // 调试：打印接口返回的完整数据
@@ -173,6 +178,20 @@ function loadMore() {
 function switchCategory(index) {
   if (currentTab.value === index) return
   currentTab.value = index
+  fetchProducts(true)
+}
+
+// 搜索输入（防抖 500ms 自动搜索）
+function onSearchInput() {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    fetchProducts(true)
+  }, 500)
+}
+
+// 清空搜索
+function clearKeyword() {
+  keyword.value = ''
   fetchProducts(true)
 }
 
@@ -272,28 +291,38 @@ onMounted(() => {
 
       <!-- 人气推荐区域 -->
       <view class="recommend-section" v-if="recommendCards.length">
-        <view class="section-header">
-          <view class="recommend-tag">
-            <text class="tag-main">人气</text>
-            <text class="tag-sub">推荐</text>
+        <view class="recommend-body">
+          <!-- 左侧标题区 -->
+          <view class="recommend-left">
+            <text class="rec-title-text">人气</text>
+            <text class="rec-title-text">推荐</text>
+            <view class="rec-sim-icon">
+              <text class="sim-chip"></text>
+            </view>
           </view>
-          <scroll-view scroll-x class="card-list">
-            <view class="sim-card" v-for="(card, index) in recommendCards" :key="index"
-              :style="{ background: card.bgColor }" @click="goDetail({ main_link: '' })">
-              <view class="card-badge" :style="{ background: card.badgeColor }">
-                <text class="badge-text">{{ card.badge }}</text>
-              </view>
-              <view class="card-operator">
-                <view class="operator-logo" :style="{ background: card.logoBg }">
-                  <text class="operator-text">{{ card.operator }}</text>
+          <!-- 右侧卡片滚动 -->
+          <scroll-view scroll-x class="recommend-scroll" :show-scrollbar="false">
+            <view class="rec-card" v-for="(card, index) in recommendCards" :key="index"
+              :style="{ background: card.bgColor }" @click="goDetail(card)">
+              <!-- 顶部：运营商 + HOT -->
+              <view class="rec-card-top">
+                <view class="rec-carrier-tag" :style="{ background: card.logoBg }">
+                  <text class="rec-carrier-text">{{ card.operator }}</text>
                 </view>
-                <text class="operator-name">{{ card.operatorName }}</text>
+                <view class="rec-hot-badge">
+                  <text class="rec-hot-text">HOT!</text>
+                </view>
               </view>
-              <text class="card-data" :style="{ color: card.dataColor }">{{ card.data }}G</text>
-              <text class="card-price">{{ card.price }}{{ card.priceUnit }}</text>
-              <view class="card-info-row">
-                <text class="info-tag" :style="{ background: card.tagBg, color: card.tagColor }">{{ card.tag }}</text>
-                <text class="card-age">{{ card.age }}</text>
+              <!-- 流量大字 -->
+              <view class="rec-flow-row">
+                <text class="rec-flow-num" :style="{ color: card.dataColor }">{{ card.data }}G</text>
+              </view>
+              <!-- 套餐名 -->
+              <text class="rec-plan-name">{{ card.name }}</text>
+              <!-- 底部信息 -->
+              <view class="rec-bottom-info">
+                <text class="rec-area">随机归属地</text>
+                <text class="rec-age" v-if="card.ageRange">{{ card.ageRange }}</text>
               </view>
             </view>
           </scroll-view>
@@ -318,8 +347,11 @@ onMounted(() => {
       <!-- 搜索栏和筛选 -->
       <view class="search-filter-bar">
         <view class="search-box">
-          <text class="search-placeholder">商品名称</text>
           <text class="search-icon">🔍</text>
+          <input class="search-input" type="text" v-model="keyword" placeholder="搜索商品名称"
+            placeholder-class="search-placeholder" confirm-type="search" @input="onSearchInput"
+            @confirm="fetchProducts(true)" />
+          <text v-if="keyword" class="search-clear" @click="clearKeyword">✕</text>
         </view>
         <view class="filter-btns">
           <text class="filter-text">筛选 ⬇</text>
@@ -337,24 +369,9 @@ onMounted(() => {
         <!-- 商品卡片 -->
         <view class="product-card" v-for="(product, index) in products" :key="product.id || index"
           @click="goDetail(product)">
-          <!-- 左侧：号卡样式 -->
+          <!-- 左侧：商品主图 -->
           <view class="product-left">
-            <view class="product-sim-card" :style="{
-              background: product.carrier === 4 ? 'linear-gradient(135deg, #F3E8FF, #E9D5FF)' :
-                           product.carrier === 3 ? 'linear-gradient(135deg, #FEE2E2, #FECACA)' :
-                           product.carrier === 1 ? 'linear-gradient(135deg, #DBEAFE, #BFDBFE)' :
-                           'linear-gradient(135deg, #FFEFED, #FFDAD5)',
-              borderColor: product.carrier === 4 ? '#C084FC' :
-                           product.carrier === 3 ? '#F87171' :
-                           product.carrier === 1 ? '#60A5FA' : '#FFCCC7'
-            }">
-              <view class="sim-chip"></view>
-              <view class="sim-operator" :style="{ color: product.carrier === 4 ? '#7C3AED' : product.carrier === 3 ? '#DC2626' : product.carrier === 1 ? '#2563EB' : '#C41E3A' }">
-                <text>{{ product.operatorShort }}</text>
-              </view>
-              <text class="sim-data" :style="{ color: product.carrier === 4 ? '#7C3AED' : product.carrier === 3 ? '#DC2626' : product.carrier === 1 ? '#2563EB' : '#C41E3A' }">{{ product.data }}G</text>
-              <text class="sim-detail">{{ product.detail }}</text>
-            </view>
+            <image class="product-image" :src="product.main_image" mode="aspectFill" lazy-load></image>
           </view>
 
           <!-- 右侧：商品信息 -->
@@ -366,7 +383,8 @@ onMounted(() => {
             <view class="product-price-row">
               <text class="product-price">{{ product.price }}</text>
               <text class="product-price-unit">元/月</text>
-              <text class="product-original-price" v-if="product.originalPrice > product.price">¥{{ product.originalPrice }}/月</text>
+              <text class="product-original-price" v-if="product.originalPrice > product.price">
+                ¥{{ product.originalPrice }}/月</text>
             </view>
             <view class="product-tags">
               <text class="tag-orange" v-if="product.tag1">{{ product.tag1 }}</text>
@@ -375,9 +393,9 @@ onMounted(() => {
             <view class="product-meta">
               <text class="meta-item" v-for="(meta, i) in product.metas" :key="i">{{ meta }}</text>
             </view>
-            <view class="product-commission" v-if="product.commission">
+            <!-- <view class="product-commission" v-if="product.commission">
               <text class="commission-text">佣金 ¥{{ product.commission }}</text>
-            </view>
+            </view> -->
           </view>
         </view>
 
@@ -649,47 +667,65 @@ onMounted(() => {
 
 /* ====== 人气推荐 ====== */
 .recommend-section {
-  margin: 24rpx 24rpx 0;
+  margin: 20rpx 24rpx 0;
   background: #FFFFFF;
-  border-radius: 24rpx;
-  padding: 28rpx 24rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
 }
 
-.section-header {
+.recommend-body {
   display: flex;
-  align-items: flex-start;
-  gap: 20rpx;
+  align-items: stretch;
+  gap: 16rpx;
 }
 
-.recommend-tag {
+/* 左侧标题区 */
+.recommend-left {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4rpx;
   padding: 12rpx 8rpx;
-  background: linear-gradient(180deg, #FFF5EC, #FFE8D0);
-  border-radius: 12rpx;
   flex-shrink: 0;
+  width: 80rpx;
 }
 
-.tag-main {
+.rec-title-text {
   font-size: 30rpx;
-  font-weight: bold;
-  color: #E86A17;
+  font-weight: 900;
+  color: #E8632A;
+  line-height: 1.2;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 6rpx;
 }
 
-.tag-sub {
-  font-size: 26rpx;
-  font-weight: bold;
-  color: #E86A17;
-}
-
-.card-list {
-  flex: 1;
+.rec-sim-icon {
+  width: 48rpx;
+  height: 60rpx;
+  background: linear-gradient(135deg, #FFE8D0, #FFDDB8);
+  border-radius: 8rpx;
+  margin-top: 8rpx;
+  position: relative;
+  border: 2rpx solid #F5C99D;
   display: flex;
-  gap: 16rpx;
-  overflow-x: auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.sim-chip {
+  width: 24rpx;
+  height: 28rpx;
+  background: linear-gradient(180deg, #F5D89A, #E8B86D);
+  border-radius: 4rpx;
+  border: 1rpx solid #D4A85C;
+}
+
+/* 右侧滚动区 */
+.recommend-scroll {
+  flex: 1;
   white-space: nowrap;
 
   &::-webkit-scrollbar {
@@ -697,85 +733,92 @@ onMounted(() => {
   }
 }
 
-.sim-card {
-  min-width: 210rpx;
+/* 卡片 */
+.rec-card {
+  display: inline-flex;
+  flex-direction: column;
+  width: 200rpx;
+  margin-right: 16rpx;
   border-radius: 16rpx;
-  padding: 16rpx;
-  position: relative;
+  padding: 16rpx 14rpx;
+  vertical-align: top;
   overflow: hidden;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
-  flex-shrink: 0;
+
+  &:last-child {
+    margin-right: 0;
+  }
 }
 
-.card-badge {
-  position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  padding: 4rpx 12rpx;
-  border-radius: 8rpx;
-}
-
-.badge-text {
-  font-size: 18rpx;
-  font-weight: bold;
-  color: #fff;
-}
-
-.card-operator {
+/* 卡片顶部：运营商 + HOT */
+.rec-card-top {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  margin-bottom: 8rpx;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
 }
 
-.operator-logo {
-  padding: 4rpx 10rpx;
+.rec-carrier-tag {
+  padding: 2rpx 10rpx;
   border-radius: 6rpx;
 }
 
-.operator-text {
+.rec-carrier-text {
   font-size: 18rpx;
-  color: #fff;
   font-weight: bold;
+  color: #fff;
 }
 
-.operator-name {
-  font-size: 20rpx;
-  color: #666;
-  font-weight: 500;
+.rec-hot-badge {
+  background: linear-gradient(90deg, #FF6B35, #FF4444);
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
 }
 
-.card-data {
+.rec-hot-text {
+  font-size: 16rpx;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 1rpx;
+}
+
+/* 流量大字 */
+.rec-flow-row {
+  margin-bottom: 6rpx;
+}
+
+.rec-flow-num {
   font-size: 48rpx;
   font-weight: 900;
-  display: block;
   line-height: 1.1;
 }
 
-.card-price {
-  font-size: 22rpx;
-  color: #666;
-  display: block;
-  margin-top: 4rpx;
-}
-
-.card-info-row {
-  margin-top: 10rpx;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6rpx;
-  align-items: center;
-}
-
-.info-tag {
-  font-size: 18rpx;
-  padding: 2rpx 8rpx;
-  border-radius: 4rpx;
-}
-
-.card-age {
+/* 套餐名 */
+.rec-plan-name {
   font-size: 20rpx;
-  color: #888;
+  color: #666;
+  margin-bottom: 10rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+/* 底部信息 */
+.rec-bottom-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+  margin-top: auto;
+}
+
+.rec-area {
+  font-size: 18rpx;
+  color: #999;
+}
+
+.rec-age {
+  font-size: 18rpx;
+  color: #999;
 }
 
 /* ====== 通知条 ====== */
@@ -852,11 +895,22 @@ onMounted(() => {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12rpx;
   background: #FFFFFF;
-  padding: 20rpx 24rpx;
+  padding: 16rpx 24rpx;
   border-radius: 40rpx;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.search-icon {
+  font-size: 28rpx;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333;
 }
 
 .search-placeholder {
@@ -864,8 +918,11 @@ onMounted(() => {
   color: #BBBBBB;
 }
 
-.search-icon {
+.search-clear {
   font-size: 28rpx;
+  color: #CCCCCC;
+  padding: 0 8rpx;
+  flex-shrink: 0;
 }
 
 .filter-btns {
@@ -903,42 +960,11 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.product-sim-card {
-  width: 160rpx;
-  height: 180rpx;
+.product-image {
+  width: 200rpx;
+  height: 200rpx;
   border-radius: 16rpx;
-  padding: 16rpx;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 2rpx solid #FFCCC7;
-}
-
-.sim-chip {
-  width: 32rpx;
-  height: 28rpx;
-  background: linear-gradient(135deg, #D4AF37, #FFD700);
-  border-radius: 4rpx;
-  margin-bottom: 8rpx;
-}
-
-.sim-operator {
-  font-size: 18rpx;
-  font-weight: bold;
-  margin-bottom: 8rpx;
-}
-
-.sim-data {
-  font-size: 52rpx;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.sim-detail {
-  font-size: 18rpx;
-  color: #999;
-  margin-top: auto;
+  background: #F5F6FA;
 }
 
 .product-right {
