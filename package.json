@@ -60,6 +60,7 @@
     "@dcloudio/uni-automator": "3.0.0-5000720260410001",
     "@dcloudio/uni-cli-shared": "3.0.0-5000720260410001",
     "@dcloudio/uni-stacktracey": "3.0.0-5000720260410001",
+    "@dcloudio/uni-ui": "^1.5.12",
     "@dcloudio/vite-plugin-uni": "3.0.0-5000720260410001",
     "@vue/runtime-core": "^3.4.21",
     "sass": "^1.100.0",
