@@ -391,11 +391,11 @@ onMounted(() => {
               <text class="tag-green" v-if="product.tag2">{{ product.tag2 }}</text>
             </view>
             <view class="product-meta">
-              <text class="meta-item" v-for="(meta, i) in product.metas" :key="i">{{ meta }}</text>
+              <view class="meta-items">
+                <text class="meta-item" v-for="(meta, i) in product.metas" :key="i">{{ meta }}</text>
+              </view>
+              <text class="action-btn" @click.stop="goDetail(product)">免费领取</text>
             </view>
-            <!-- <view class="product-commission" v-if="product.commission">
-              <text class="commission-text">佣金 ¥{{ product.commission }}</text>
-            </view> -->
           </view>
         </view>
 
@@ -1045,8 +1045,14 @@ onMounted(() => {
 
 .product-meta {
   display: flex;
-  gap: 16rpx;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 12rpx;
+}
+
+.meta-items {
+  display: flex;
+  gap: 16rpx;
   flex-wrap: wrap;
 }
 
@@ -1067,6 +1073,17 @@ onMounted(() => {
   background: #FFF1F0;
   padding: 4rpx 12rpx;
   border-radius: 6rpx;
+}
+
+.action-btn {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #FF6B35, #FF4444);
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  letter-spacing: 2rpx;
+  flex-shrink: 0;
 }
 
 /* ====== 加载/空状态/到底 ====== */

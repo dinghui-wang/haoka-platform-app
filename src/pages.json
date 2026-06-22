@@ -15,6 +15,13 @@
 			}
 		},
 		{
+			"path": "pages/order/detail",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": ""
+			}
+		},
+		{
 			"path": "pages/local-card/index",
 			"style": {
 				"navigationStyle": "custom",
