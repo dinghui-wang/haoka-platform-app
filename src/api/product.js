@@ -31,7 +31,7 @@ export function getProductList(params = {}) {
   if (params.age_range) data.age_range = params.age_range;
   if (params.issuer_code) data.issuer_code = params.issuer_code;
 
-  return request.post("/api/product/list", data);
+  return request.post("/app/product/list", data);
 }
 
 /**

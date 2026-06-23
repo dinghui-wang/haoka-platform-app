@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import request from '@/utils/request'
+import { queryOrdersByPhone } from '@/api/order.js'
 
 const currentTabbar = ref(1)
 
@@ -9,6 +9,7 @@ const phone = ref('')
 const searching = ref(false)
 const hasSearched = ref(false)
 const orders = ref([])
+const receiverPhone = ref('') // 后端返回的脱敏号码（用于页面回显）
 
 // 查询订单
 async function doSearch() {
@@ -24,13 +25,23 @@ async function doSearch() {
   searching.value = true
   hasSearched.value = true
   try {
-    const res = await request.post('/api/order/query', { phone: p })
-    // 兼容多种返回格式
-    let list = []
-    if (Array.isArray(res)) list = res
-    else if (res?.list) list = res.list
-    else if (res?.data?.list) list = res.data.list
-    else if (Array.isArray(res?.data)) list = res.data
+    // request.responseInterceptor 返回的是 HTTP 响应体：
+    // { code, message, data: { receiver_phone, orders } }
+    const res = await queryOrdersByPhone(p)
+
+    // 业务错误处理（HTTP 200 但 code !== 200）
+    if (res?.code !== 200) {
+      const msg = res?.message || '查询失败'
+      uni.showToast({ title: msg, icon: 'none' })
+      orders.value = []
+      receiverPhone.value = ''
+      return
+    }
+
+    // 业务数据在 res.data 中
+    const body = res.data || {}
+    const list = body.orders || []
+    receiverPhone.value = body.receiver_phone || ''
     orders.value = list.map(transformOrder)
     if (orders.value.length === 0) {
       uni.showToast({ title: '未查询到相关订单', icon: 'none' })
@@ -39,6 +50,7 @@ async function doSearch() {
     console.error('查询失败', e)
     uni.showToast({ title: '查询失败，请重试', icon: 'none' })
     orders.value = []
+    receiverPhone.value = ''
   } finally {
     searching.value = false
   }
@@ -48,56 +60,87 @@ function clearPhone() {
   phone.value = ''
   hasSearched.value = false
   orders.value = []
+  receiverPhone.value = ''
 }
 
+// 将后端 OrderResponse 转换为 UI 友好结构
 function transformOrder(item) {
   return {
-    id: item.order_no || item.id || '',
-    productName: item.product_name || item.name || '',
-    mainImage: item.main_image || '',
-    operator: item.carrier_name || item.operator || '',
-    status: item.status || item.order_status || '未知',
-    statusColor: getStatusColor(item.status || item.order_status),
-    price: String(item.price || item.current_monthly || 0),
-    createTime: item.create_time || item.created_at || '',
-    consignee: item.consignee || item.name || '',
-    idCard: maskCard(item.id_card || ''),
-    mobile: maskMobile(item.mobile || ''),
-    address: maskAddress(item.address || ''),
+    // 基础
+    id: item.id,
+    orderNo: item.order_no || '',
+    productName: item.product_name || '',
+    // 收货人（后端已脱敏）
+    receiverName: item.receiver_name || '',
+    receiverPhone: item.receiver_phone || '',
+    receiverIdCard: item.receiver_id_card || '',
+    region: [item.receiver_province, item.receiver_city, item.receiver_district]
+      .filter(Boolean).join(' '),
+    address: item.receiver_address || '',
+    // 号卡专属
+    phoneNum: item.phone_num || '',
+    iccid: item.iccid || '',
+    // 状态
+    status: item.status,
+    statusText: item.status_text || getStatusText(item.status),
+    statusColor: getStatusColor(item.status, item.status_text),
+    // 物流
+    logisticsCompany: item.logistics_company || '',
     trackingNo: item.tracking_no || '',
-    orderStatusText: getStatusText(item.status || item.order_status),
-    logisticsName: item.logistics_name || item.express_company || '',
-    specs: item.detail ? {
-      traffic: item.detail.general_traffic,
-      directedTraffic: item.detail.directed_traffic,
-      voice: item.detail.voice_minutes,
-    } : {},
+    shippedAt: item.shipped_at || '',
+    // 首充
+    firstRechargeAt: item.first_recharge_at || '',
+    firstRechargeAmount: Number(item.first_recharge_amount || 0),
+    // 完成 / 取消
+    completedAt: item.completed_at || '',
+    cancelledAt: item.cancelled_at || '',
+    cancelReason: item.cancel_reason || '',
+    // 备注
+    remark: item.remark || '',
+    // 时间
+    createTime: item.created_at || '',
+    updateTime: item.updated_at || '',
   }
 }
 
-function getStatusColor(status) {
-  const map = { '已发货': '#2D9D78', '已完成': '#2D9D78', '已激活': '#2D9D78', '待发货': '#E86A17', '待付款': '#E86A17', '处理中': '#4A9FF5' }
-  return map[status] || '#999'
-}
-
+// 状态码 -> 文案 / 颜色（兼容后端可能只返回 status 数字）
 function getStatusText(status) {
-  return status || '未知状态'
+  const map = {
+    1: '待付款',
+    2: '待发货',
+    3: '已发货',
+    4: '已完成',
+    5: '已取消',
+    6: '处理中',
+  }
+  return map[status] || '未知状态'
 }
 
-function maskCard(val) {
-  if (!val || val.length < 7) return val
-  return val.substring(0, 3) + '*'.repeat(Math.min(12, val.length - 6)) + val.slice(-4)
+function getStatusColor(status, text) {
+  const map = {
+    1: '#E86A17', // 待付款
+    2: '#E86A17', // 待发货
+    3: '#4A9FF5', // 已发货
+    4: '#2D9D78', // 已完成
+    5: '#999999', // 已取消
+    6: '#4A9FF5', // 处理中
+  }
+  if (map[status]) return map[status]
+  // 兜底按文字判断
+  const t = text || ''
+  if (t.includes('完成') || t.includes('激活')) return '#2D9D78'
+  if (t.includes('发货')) return '#4A9FF5'
+  if (t.includes('付款') || t.includes('处理')) return '#E86A17'
+  if (t.includes('取消')) return '#999'
+  return '#999'
 }
 
-function maskMobile(val) {
-  if (!val || val.length < 11) return val
-  return val.substring(0, 3) + '****' + val.slice(-4)
-}
-
-function maskAddress(val) {
-  if (!val) return ''
-  if (val.length <= 6) return val
-  return val.substring(0, val.length - 3) + '***'
+function copyText(text) {
+  if (!text) return
+  uni.setClipboardData({
+    data: String(text),
+    success: () => uni.showToast({ title: '已复制', icon: 'none' }),
+  })
 }
 
 // 跳转详情
@@ -124,16 +167,8 @@ function goDetail(order) {
         </view>
         <view class="input-row">
           <text class="input-prefix">📱</text>
-          <input
-            class="phone-input"
-            type="number"
-            v-model="phone"
-            placeholder="请输入收货人手机号"
-            placeholder-class="input-ph"
-            maxlength="11"
-            confirm-type="search"
-            @confirm="doSearch"
-          />
+          <input class="phone-input" type="number" v-model="phone" placeholder="请输入收货人手机号" placeholder-class="input-ph"
+            maxlength="11" confirm-type="search" @confirm="doSearch" />
           <text v-if="phone" class="clear-icon" @click="clearPhone">✕</text>
         </view>
         <button class="search-btn" :class="{ loading: searching }" @click="doSearch">
@@ -155,39 +190,93 @@ function goDetail(order) {
 
       <!-- 有结果 -->
       <scroll-view v-else scroll-y class="result-list" :show-scrollbar="false">
-        <view class="order-card" v-for="(order, index) in orders" :key="index" @click="goDetail(order)">
-          <!-- 产品信息行 -->
+        <!-- 查询归属信息 -->
+        <view v-if="receiverPhone" class="result-summary">
+          <text class="rs-label">查询号码</text>
+          <text class="rs-value">{{ receiverPhone }}</text>
+          <text class="rs-count">共 {{ orders.length }} 个订单</text>
+        </view>
+
+        <view class="order-card" v-for="order in orders" :key="order.id" @click="goDetail(order)">
+          <!-- 卡片头部：状态 + 订单号 -->
+          <view class="card-head">
+            <view class="head-status"
+              :style="{ color: order.statusColor, borderColor: order.statusColor, background: order.statusColor + '15' }">
+              {{ order.statusText }}
+            </view>
+            <view class="head-order-no" @click.stop="copyText(order.orderNo)">
+              <text class="ho-label">订单号</text>
+              <text class="ho-value mono">{{ order.orderNo }}</text>
+              <text class="ho-copy">复制</text>
+            </view>
+          </view>
+
+          <!-- 产品信息 -->
           <view class="card-product">
-            <image v-if="order.mainImage" class="cp-img" :src="order.mainImage" mode="aspectFill" lazy-load />
-            <view v-else class="cp-placeholder">
-              <text class="cp-ph-icon">📶</text>
+            <view class="cp-icon-wrap">
+              <text class="cp-icon">📶</text>
             </view>
             <view class="cp-info">
               <text class="cp-name">{{ order.productName }}</text>
-              <view class="cp-specs">
-                <text class="spec-item" v-if="order.specs.traffic">{{ order.specs.traffic }}G通用流量</text>
-                <text class="spec-item" v-if="order.specs.directedTraffic">{{ order.specs.directedTraffic }}G定向</text>
-                <text class="spec-item" v-if="order.specs.voice">{{ order.specs.voice }}分钟通话</text>
+              <view class="cp-tags" v-if="order.phoneNum">
+                <text class="cp-tag phone">号卡：{{ order.phoneNum }}</text>
               </view>
             </view>
           </view>
 
-          <!-- 订单摘要 -->
-          <view class="card-summary">
-            <view class="sum-line">
-              <text class="sum-label">下单时间</text>
-              <text class="sum-value">{{ order.createTime }}</text>
+          <!-- 关键信息：收货人 / 号卡 / 物流 -->
+          <view class="card-rows">
+            <!-- 收货人 -->
+            <view class="row-item">
+              <text class="row-icon">👤</text>
+              <text class="row-label">收货人</text>
+              <text class="row-value">{{ order.receiverName }}　{{ order.receiverPhone }}</text>
             </view>
-            <view class="sum-line">
-              <text class="sum-label">订单编号</text>
-              <text class="sum-value mono">{{ order.id }}</text>
+            <view class="row-item" v-if="order.receiverIdCard">
+              <text class="row-icon">🆔</text>
+              <text class="row-label">身份证</text>
+              <text class="row-value mono">{{ order.receiverIdCard }}</text>
             </view>
-            <view class="sum-line">
-              <text class="sum-label">订单状态</text>
-              <text class="sum-status" :style="{ color: order.statusColor, borderColor: order.statusColor }">
-                {{ order.orderStatusText }}
+            <view class="row-item" v-if="order.address">
+              <text class="row-icon">📍</text>
+              <text class="row-label">收货地址</text>
+              <text class="row-value ellipsis-2">{{ order.region }} {{ order.address }}</text>
+            </view>
+            <!-- 物流 -->
+            <view class="row-item" v-if="order.logisticsCompany || order.trackingNo">
+              <text class="row-icon">🚚</text>
+              <text class="row-label">物流</text>
+              <text class="row-value">
+                {{ order.logisticsCompany || '—' }}
+                <text v-if="order.trackingNo" class="mono">　{{ order.trackingNo }}</text>
               </text>
             </view>
+            <!-- 首充 -->
+            <view class="row-item" v-if="order.firstRechargeAt">
+              <text class="row-icon">⚡</text>
+              <text class="row-label">首充</text>
+              <text class="row-value">
+                {{ order.firstRechargeAt }}
+                <text v-if="order.firstRechargeAmount > 0">　¥{{ order.firstRechargeAmount }}</text>
+              </text>
+            </view>
+            <!-- 完成时间 -->
+            <view class="row-item" v-if="order.completedAt">
+              <text class="row-icon">✅</text>
+              <text class="row-label">完成时间</text>
+              <text class="row-value">{{ order.completedAt }}</text>
+            </view>
+            <!-- 取消原因 -->
+            <view class="row-item cancel" v-if="order.cancelledAt && order.cancelReason">
+              <text class="row-icon">⚠️</text>
+              <text class="row-label">取消原因</text>
+              <text class="row-value">{{ order.cancelReason }}</text>
+            </view>
+          </view>
+
+          <!-- 卡片底部：下单时间 -->
+          <view class="card-foot">
+            <text class="foot-time">下单：{{ order.createTime }}</text>
           </view>
 
           <!-- 底部箭头 -->
@@ -205,16 +294,19 @@ function goDetail(order) {
 
     <!-- 底部导航栏 -->
     <view class="custom-tabbar">
-      <view class="tabbar-item" :class="{ active: currentTabbar === 0 }" @click="uni.redirectTo({ url: '/pages/index/index' })">
+      <view class="tabbar-item" :class="{ active: currentTabbar === 0 }"
+        @click="uni.redirectTo({ url: '/pages/index/index' })">
         <text class="tb-icon">🏠</text><text class="tb-text">首页</text>
       </view>
       <view class="tabbar-item active">
         <text class="tb-icon">📋</text><text class="tb-text">订单</text>
       </view>
-      <view class="tabbar-item" :class="{ active: currentTabbar === 2 }" @click="uni.redirectTo({ url: '/pages/local-card/index' })">
+      <view class="tabbar-item" :class="{ active: currentTabbar === 2 }"
+        @click="uni.redirectTo({ url: '/pages/local-card/index' })">
         <text class="tb-icon">👤</text><text class="tb-text">本地号卡</text>
       </view>
-      <view class="tabbar-item" :class="{ active: currentTabbar === 3 }" @click="uni.redirectTo({ url: '/pages/customer-service/index' })">
+      <view class="tabbar-item" :class="{ active: currentTabbar === 3 }"
+        @click="uni.redirectTo({ url: '/pages/customer-service/index' })">
         <text class="tb-icon">🎧</text><text class="tb-text">客服</text>
       </view>
     </view>
@@ -245,21 +337,30 @@ function goDetail(order) {
   border-radius: 50%;
   opacity: 0.15;
 }
+
 .c1 {
-  width: 200rpx; height: 200rpx;
-  top: -40rpx; right: -30rpx;
+  width: 200rpx;
+  height: 200rpx;
+  top: -40rpx;
+  right: -30rpx;
   background: #fff;
 }
+
 .c2 {
-  width: 120rpx; height: 120rpx;
-  top: 140rpx; left: -20rpx;
-  background: rgba(255,255,255,0.3);
+  width: 120rpx;
+  height: 120rpx;
+  top: 140rpx;
+  left: -20rpx;
+  background: rgba(255, 255, 255, 0.3);
 }
+
 .c3 {
-  width: 80rpx; height: 80rpx;
-  bottom: 20rpx; right: 60rpx;
-  background: rgba(255,255,255,0.25);
-  box-shadow: 0 0 30rpx rgba(255,255,255,0.3);
+  width: 80rpx;
+  height: 80rpx;
+  bottom: 20rpx;
+  right: 60rpx;
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 30rpx rgba(255, 255, 255, 0.3);
 }
 
 /* 搜索卡片 */
@@ -279,9 +380,11 @@ function goDetail(order) {
   gap: 12rpx;
   margin-bottom: 28rpx;
 }
+
 .title-icon {
   font-size: 36rpx;
 }
+
 .title-text {
   font-size: 38rpx;
   font-weight: 900;
@@ -303,21 +406,25 @@ function goDetail(order) {
     border-color: #5B8DEF;
   }
 }
+
 .input-prefix {
   font-size: 30rpx;
   margin-right: 12rpx;
   flex-shrink: 0;
 }
+
 .phone-input {
   flex: 1;
   height: 88rpx;
   font-size: 28rpx;
   color: #333;
 }
+
 .input-ph {
   color: #BFBFBF;
   font-size: 26rpx;
 }
+
 .clear-icon {
   font-size: 26rpx;
   color: #ccc;
@@ -371,16 +478,19 @@ function goDetail(order) {
   justify-content: center;
   padding: 120rpx 0;
 }
+
 .empty-illustration {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16rpx;
 }
+
 .ill-main {
   font-size: 100rpx;
   opacity: 0.6;
 }
+
 .ill-sub {
   font-size: 26rpx;
   color: #BBB;
@@ -390,6 +500,35 @@ function goDetail(order) {
 .result-list {
   max-height: calc(100vh - 520rpx);
   padding-top: 20rpx;
+}
+
+/* 查询结果顶部摘要 */
+.result-summary {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 16rpx;
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.03);
+}
+
+.rs-label {
+  color: #999;
+}
+
+.rs-value {
+  color: #5B8DEF;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+}
+
+.rs-count {
+  margin-left: auto;
+  color: #BBB;
+  font-size: 22rpx;
 }
 
 .order-card {
@@ -406,107 +545,203 @@ function goDetail(order) {
   }
 }
 
+/* 卡片头部：状态 + 订单号 */
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+  padding-bottom: 18rpx;
+  border-bottom: 1rpx dashed #EDEFF5;
+  padding-right: 40rpx;
+}
+
+.head-status {
+  font-size: 24rpx;
+  font-weight: 700;
+  border: 1rpx solid currentColor;
+  padding: 4rpx 14rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+
+.head-order-no {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  min-width: 0;
+  flex: 1;
+  margin-left: 14rpx;
+  overflow: hidden;
+}
+
+.ho-label {
+  font-size: 22rpx;
+  color: #BBB;
+  flex-shrink: 0;
+}
+
+.ho-value {
+  font-size: 22rpx;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.ho-copy {
+  font-size: 20rpx;
+  color: #5B8DEF;
+  background: #EDF2FF;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  flex-shrink: 0;
+}
+
 /* 产品行 */
 .card-product {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  margin-bottom: 20rpx;
+  gap: 18rpx;
+  margin-bottom: 18rpx;
 }
-.cp-img {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: 14rpx;
-  background: #F5F6FA;
-  flex-shrink: 0;
-}
-.cp-placeholder {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: 14rpx;
+
+.cp-icon-wrap {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 16rpx;
   background: linear-gradient(135deg, #EDF2FF, #E8EBFF);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.cp-ph-icon {
-  font-size: 52rpx;
-  opacity: 0.5;
+
+.cp-icon {
+  font-size: 44rpx;
+  opacity: 0.7;
 }
+
 .cp-info {
   flex: 1;
   min-width: 0;
 }
+
 .cp-name {
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 700;
   color: #1A1A2E;
-  display: block;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1.35;
+  line-height: 1.4;
 }
-.cp-specs {
+
+.cp-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 10rpx;
   margin-top: 10rpx;
 }
-.spec-item {
+
+.cp-tag {
   font-size: 20rpx;
-  color: #888;
+  padding: 3rpx 12rpx;
+  border-radius: 6rpx;
   background: #F5F6FA;
-  padding: 4rpx 12rpx;
-  border-radius: 8rpx;
-}
+  color: #888;
 
-/* 订单摘要 */
-.card-summary {
-  border-top: 1rpx solid #F2F3F7;
-  padding-top: 18rpx;
-}
-.sum-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12rpx;
-
-  &:last-child {
-    margin-bottom: 0;
+  &.phone {
+    background: #E8F4FD;
+    color: #4A9FF5;
+    font-weight: 600;
   }
 }
-.sum-label {
+
+/* 信息行 */
+.card-rows {
+  background: #F9FAFC;
+  border-radius: 12rpx;
+  padding: 6rpx 16rpx;
+}
+
+.row-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #F0F2F5;
+  font-size: 24rpx;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.cancel .row-value {
+    color: #E86A17;
+  }
+}
+
+.row-icon {
+  font-size: 24rpx;
+  margin-right: 10rpx;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.row-label {
   font-size: 24rpx;
   color: #999;
+  width: 110rpx;
   flex-shrink: 0;
+  line-height: 1.4;
 }
-.sum-value {
-  font-size: 24rpx;
-  color: #555;
+
+.row-value {
+  flex: 1;
+  color: #444;
+  line-height: 1.4;
+  word-break: break-all;
 }
+
+.ellipsis-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 卡片底部 */
 .mono {
   font-family: monospace;
   letter-spacing: 1rpx;
 }
-.sum-status {
-  font-size: 24rpx;
-  font-weight: 600;
-  border: 1rpx solid currentColor;
-  padding: 2rpx 14rpx;
-  border-radius: 8rpx;
+
+.card-foot {
+  margin-top: 18rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #F2F3F7;
+  padding-right: 40rpx;
+}
+
+.foot-time {
+  font-size: 22rpx;
+  color: #BBB;
 }
 
 /* 箭头 */
 .card-arrow {
   position: absolute;
   right: 24rpx;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 36rpx;
   font-size: 36rpx;
   color: #DDD;
   font-weight: bold;
+  line-height: 1;
 }
 
 /* 无结果 */
@@ -517,14 +752,17 @@ function goDetail(order) {
   padding: 100rpx 0;
   gap: 12rpx;
 }
+
 .nr-icon {
   font-size: 90rpx;
   opacity: 0.45;
 }
+
 .nr-text {
   font-size: 28rpx;
   color: #999;
 }
+
 .nr-tip {
   font-size: 24rpx;
   color: #CCC;
@@ -544,19 +782,28 @@ function goDetail(order) {
   align-items: center;
   justify-content: space-around;
   padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -2rpx 16rpx rgba(0,0,0,.06);
+  box-shadow: 0 -2rpx 16rpx rgba(0, 0, 0, .06);
   z-index: 99;
 }
+
 .tabbar-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4rpx;
+
   &.active .tb-text {
     color: #7B68EE;
     font-weight: 600;
   }
 }
-.tb-icon { font-size: 42rpx; }
-.tb-text { font-size: 21rpx; color: #999; }
+
+.tb-icon {
+  font-size: 42rpx;
+}
+
+.tb-text {
+  font-size: 21rpx;
+  color: #999;
+}
 </style>
