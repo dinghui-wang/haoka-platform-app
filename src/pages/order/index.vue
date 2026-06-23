@@ -1,6 +1,10 @@
 <script setup>
 import { ref } from 'vue'
-import { queryOrdersByPhone } from '@/api/order.js'
+import {
+  queryOrdersByPhone,
+  transformOrder,
+  encodeOrderToUrl,
+} from '@/api/order.js'
 
 const currentTabbar = ref(1)
 
@@ -63,78 +67,6 @@ function clearPhone() {
   receiverPhone.value = ''
 }
 
-// 将后端 OrderResponse 转换为 UI 友好结构
-function transformOrder(item) {
-  return {
-    // 基础
-    id: item.id,
-    orderNo: item.order_no || '',
-    productName: item.product_name || '',
-    // 收货人（后端已脱敏）
-    receiverName: item.receiver_name || '',
-    receiverPhone: item.receiver_phone || '',
-    receiverIdCard: item.receiver_id_card || '',
-    region: [item.receiver_province, item.receiver_city, item.receiver_district]
-      .filter(Boolean).join(' '),
-    address: item.receiver_address || '',
-    // 号卡专属
-    phoneNum: item.phone_num || '',
-    iccid: item.iccid || '',
-    // 状态
-    status: item.status,
-    statusText: item.status_text || getStatusText(item.status),
-    statusColor: getStatusColor(item.status, item.status_text),
-    // 物流
-    logisticsCompany: item.logistics_company || '',
-    trackingNo: item.tracking_no || '',
-    shippedAt: item.shipped_at || '',
-    // 首充
-    firstRechargeAt: item.first_recharge_at || '',
-    firstRechargeAmount: Number(item.first_recharge_amount || 0),
-    // 完成 / 取消
-    completedAt: item.completed_at || '',
-    cancelledAt: item.cancelled_at || '',
-    cancelReason: item.cancel_reason || '',
-    // 备注
-    remark: item.remark || '',
-    // 时间
-    createTime: item.created_at || '',
-    updateTime: item.updated_at || '',
-  }
-}
-
-// 状态码 -> 文案 / 颜色（兼容后端可能只返回 status 数字）
-function getStatusText(status) {
-  const map = {
-    1: '待付款',
-    2: '待发货',
-    3: '已发货',
-    4: '已完成',
-    5: '已取消',
-    6: '处理中',
-  }
-  return map[status] || '未知状态'
-}
-
-function getStatusColor(status, text) {
-  const map = {
-    1: '#E86A17', // 待付款
-    2: '#E86A17', // 待发货
-    3: '#4A9FF5', // 已发货
-    4: '#2D9D78', // 已完成
-    5: '#999999', // 已取消
-    6: '#4A9FF5', // 处理中
-  }
-  if (map[status]) return map[status]
-  // 兜底按文字判断
-  const t = text || ''
-  if (t.includes('完成') || t.includes('激活')) return '#2D9D78'
-  if (t.includes('发货')) return '#4A9FF5'
-  if (t.includes('付款') || t.includes('处理')) return '#E86A17'
-  if (t.includes('取消')) return '#999'
-  return '#999'
-}
-
 function copyText(text) {
   if (!text) return
   uni.setClipboardData({
@@ -143,10 +75,11 @@ function copyText(text) {
   })
 }
 
-// 跳转详情
+// 跳转详情：把整个订单对象序列化后通过 URL 传入详情页，详情页不再发请求
 function goDetail(order) {
+  const encoded = encodeOrderToUrl(order)
   uni.navigateTo({
-    url: `/pages/order/detail?id=${order.id}&phone=${phone.value}`
+    url: `/pages/order/detail?data=${encoded}&phone=${encodeURIComponent(phone.value)}`,
   })
 }
 </script>

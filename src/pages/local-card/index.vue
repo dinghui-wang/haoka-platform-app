@@ -180,7 +180,7 @@ function formatSoldCount(count) {
             </view>
             <view class="tabbar-item" :class="{ active: currentTabbar === 2 }">
                 <text class="tabbar-icon">👤</text>
-                <text class="tabbar-text">北京号卡</text>
+                <text class="tabbar-text">本地号卡</text>
             </view>
             <view class="tabbar-item" :class="{ active: currentTabbar === 3 }"
                 @click="$router.push('/pages/customer-service/index')">
