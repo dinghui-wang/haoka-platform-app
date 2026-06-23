@@ -289,7 +289,6 @@ function formatSoldCount(count) {
 
 /* 号卡列表 */
 .card-list {
-    flex: 1;
     width: 100%;
     box-sizing: border-box;
     padding: 0 20rpx 140rpx;

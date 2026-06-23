@@ -160,19 +160,19 @@ export default {
             ]
         }
     },
-  methods: {
-    switchTab(index) {
-      if (index === 0) {
-        uni.redirectTo({ url: '/pages/index/index' })
-      } else if (index === 1) {
-        uni.redirectTo({ url: '/pages/order/index' })
-      } else if (index === 2) {
-        uni.redirectTo({ url: '/pages/local-card/index' })
-      } else if (index === 3) {
-        // 当前页面不需要跳转
-      }
+    methods: {
+        switchTab(index) {
+            if (index === 0) {
+                uni.redirectTo({ url: '/pages/index/index' })
+            } else if (index === 1) {
+                uni.redirectTo({ url: '/pages/order/index' })
+            } else if (index === 2) {
+                uni.redirectTo({ url: '/pages/local-card/index' })
+            } else if (index === 3) {
+                // 当前页面不需要跳转
+            }
+        }
     }
-  }
 }
 </script>
 
@@ -211,7 +211,8 @@ export default {
 
 /* 主内容区 */
 .main-content {
-    flex: 1;
+    overflow-x: hidden;
+    box-sizing: border-box;
     padding: 24rpx;
 }
 
