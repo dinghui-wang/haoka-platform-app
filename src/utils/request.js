@@ -4,7 +4,7 @@
  */
 
 // 开发环境走 Vite 代理（相对路径），生产环境用完整域名
-const BASE_URL = import.meta.env.DEV ? "" : "http://localhost:8080";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 // 请求拦截器
 function requestInterceptor(config) {
