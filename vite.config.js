@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/app": {
-        target: "http://localhost:8080", // 改成 http，避免 SSL 错误
+        target: "http://localhost:19999", // 改成 http，避免 SSL 错误
         changeOrigin: true,
         secure: false,
       },
