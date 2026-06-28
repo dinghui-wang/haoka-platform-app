@@ -1,6 +1,37 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { getProductList, CARRIER_MAP } from '@/api/product.js'
+
+// ========== 通知滚动播报 ==========
+// 5G号卡相关文案（上下滚动）
+const noticeList = ref([
+  '5G号卡新品上线，每月100GB超大流量，低至9元/月',
+  '广电5G青春卡，19元月租享192G全国流量',
+  '电信5G星卡，首月免费用，激活即送50元话费',
+  '联通5G沃派卡，9.9元/月，100G通用+100分钟通话',
+  '移动5G花卡，29元月租享200G大流量，全国通用不限速',
+])
+const noticeIndex = ref(0)
+const noticeTransformY = ref(0)
+let noticeTimer = null
+
+// 启动通知上下滚动
+function startNoticeScroll() {
+  if (noticeTimer) return
+  noticeTimer = setInterval(() => {
+    noticeIndex.value = (noticeIndex.value + 1) % noticeList.value.length
+    // 向上平移一条的高度（每条高度 40rpx ≈ 20px，转成 px 用 -40rpx * noticeIndex）
+    noticeTransformY.value = -noticeIndex.value * 40
+  }, 3000)
+}
+
+// 停止通知滚动
+function stopNoticeScroll() {
+  if (noticeTimer) {
+    clearInterval(noticeTimer)
+    noticeTimer = null
+  }
+}
 
 // ========== 功能入口 ==========
 const features = ref([
@@ -230,6 +261,11 @@ function switchTab(index) {
 
 onMounted(() => {
   fetchProducts(true)
+  startNoticeScroll()
+})
+
+onUnmounted(() => {
+  stopNoticeScroll()
 })
 </script>
 
@@ -274,7 +310,7 @@ onMounted(() => {
             </view>
           </view>
           <view class="center-info">
-            <text class="center-title">5G浩卡官方办理中心</text>
+            <text class="center-title">5G号卡官方办理中心</text>
             <text class="center-desc">四大运营商授权 官方正品保障</text>
           </view>
         </view>
@@ -332,7 +368,11 @@ onMounted(() => {
       <!-- 通知提示条 -->
       <view class="notice-bar">
         <view class="notice-icon"><text>🔊</text></view>
-        <text class="notice-text">严禁省内产品转寄省外通知</text>
+        <view class="notice-scroll-container">
+          <view class="notice-scroll-content" :style="{ transform: `translateY(${noticeTransformY}rpx)` }">
+            <text class="notice-text" v-for="(item, index) in noticeList" :key="index">{{ item }}</text>
+          </view>
+        </view>
       </view>
 
       <!-- 分类标签栏 -->
@@ -831,16 +871,50 @@ onMounted(() => {
   padding: 20rpx 24rpx;
   border-radius: 12rpx;
   border: 1rpx solid #FFE8D0;
+  overflow: hidden;
+  height: 80rpx;
 }
 
 .notice-icon {
   font-size: 28rpx;
+  flex-shrink: 0;
+  line-height: 40rpx;
+  height: 40rpx;
+}
+
+.notice-scroll-container {
+  flex: 1;
+  overflow: hidden;
+  height: 40rpx;
+  position: relative;
+}
+
+.notice-scroll-content {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.5s ease;
 }
 
 .notice-text {
   font-size: 26rpx;
   color: #D4790A;
   font-weight: 500;
+  white-space: nowrap;
+  height: 40rpx;
+  line-height: 40rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 /* ====== 分类标签栏 ====== */
@@ -986,8 +1060,6 @@ onMounted(() => {
   color: #1A1A2E;
   font-weight: 600;
   line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-top: 8rpx;
