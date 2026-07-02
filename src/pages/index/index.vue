@@ -407,8 +407,7 @@ onUnmounted(() => {
         </view>
 
         <!-- 商品卡片 -->
-        <view class="product-card" v-for="(product, index) in products" :key="product.id || index"
-          @click="goDetail(product)">
+        <view class="product-card" v-for="(product, index) in products" :key="product.id || index">
           <!-- 左侧：商品主图 -->
           <view class="product-left">
             <image class="product-image" :src="product.main_image" mode="aspectFill" lazy-load></image>
