@@ -717,6 +717,10 @@ onUnmounted(() => {
   display: flex;
   align-items: stretch;
   gap: 16rpx;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* 左侧标题区 */
@@ -765,7 +769,9 @@ onUnmounted(() => {
 /* 右侧滚动区 */
 .recommend-scroll {
   flex: 1;
+  min-width: 0;
   white-space: nowrap;
+  overflow: hidden;
 
   &::-webkit-scrollbar {
     display: none;
