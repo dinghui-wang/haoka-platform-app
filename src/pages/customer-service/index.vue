@@ -27,8 +27,8 @@ const showFaqIndex = ref(-1)
 
 // 客服信息
 const contactInfo = ref({
-    phone: '400-123-4567',
-    wechat: 'haoka-service',
+    phone: '18094782253',
+    wechat: '18094782253',
     serviceHours: '9:00-21:00'
 })
 
@@ -42,6 +42,44 @@ function makePhoneCall() {
         fail: () => {
             uni.showToast({
                 title: '拨打失败',
+                icon: 'none'
+            })
+        }
+    })
+}
+
+// 复制微信号并提示去微信搜索
+function copyWechat() {
+    const wechat = contactInfo.value.wechat
+    // 复制到剪贴板
+    uni.setClipboardData({
+        data: wechat,
+        success: () => {
+            uni.showModal({
+                title: '复制成功',
+                content: `微信号 ${wechat} 已复制\n\n请打开微信 → 顶部搜索框 → 粘贴搜索 添加客服`,
+                showCancel: false,
+                confirmText: '我知道了',
+                success: (res) => {
+                    if (res.confirm) {
+                        // 尝试唤起微信（仅在小程序环境生效）
+                        // #ifdef MP-WEIXIN
+                        uni.openChatPanel &&
+                            uni.openChatPanel({
+                                openId: '',
+                                success: () => {},
+                                fail: () => {
+                                    // 唤起失败不做处理
+                                }
+                            })
+                        // #endif
+                    }
+                }
+            })
+        },
+        fail: () => {
+            uni.showToast({
+                title: '复制失败，请手动复制',
                 icon: 'none'
             })
         }
@@ -79,7 +117,7 @@ function makePhoneCall() {
                         <text class="contact-arrow">›</text>
                     </view>
 
-                    <view class="contact-item">
+                    <view class="contact-item" @click="copyWechat">
                         <view class="contact-icon wechat">
                             <text class="icon-text">💬</text>
                         </view>
