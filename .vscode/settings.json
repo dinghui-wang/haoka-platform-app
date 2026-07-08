@@ -1,0 +1,10 @@
+{
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": true,
+  "explorer.fileNesting.patterns": {
+    "package.json": "bun.lock, .eslintrc*, .prettierrc*, .lintstagedrc*, commitlint.config.*",
+    "tsconfig.json": "tsconfig.app.json, tsconfig.node.json,.oxfmtrc.json",
+    ".env": ".env.development, .env.production",
+    "auto-imports.d.ts": "components.d.ts, env.d.ts"
+  }
+}
