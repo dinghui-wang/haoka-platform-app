@@ -2,5 +2,5 @@ name = "haoka-platform-app"
 compatibility_date = "2026-07-09"
 
 [assets]
-directory = "./dist"
+directory = "./dist/build/h5"
 not_found_handling = "single-page-application"
