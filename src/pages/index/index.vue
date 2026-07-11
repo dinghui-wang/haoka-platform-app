@@ -226,10 +226,11 @@ function clearKeyword() {
   fetchProducts(true)
 }
 
-// 跳转商品详情（站内 webview 中转）
+// 跳转商品详情（站内中转页）
 // 走 https://bk.kahone.top/p/{id}?to=编码后的真实链接
-// CF Pages Function 会校验白名单后 302 跳到运营商页
-// H5/小程序/App 都用站内 webview 容器承载，顶栏始终是 bk.kahone.top
+// CF Worker 会校验白名单后 302 跳到真实运营商页
+// H5：中转页显示"跳转中"后 location.href 同标签跳走（顶栏短暂显示 bk.kahone.top/p/... 再跳运营商）
+// 小程序/App：中转页用 <web-view> 加载
 function goDetail(product) {
   if (!product.main_link) return
   const origin = (typeof window !== 'undefined' && window.location && window.location.origin) || ''
@@ -238,7 +239,7 @@ function goDetail(product) {
   const target = isDev
     ? product.main_link
     : `${origin}/p/${product.id}?to=${encodeURIComponent(product.main_link)}`
-  // 统一走站内 webview 页面（H5 渲染 iframe，小程序/App 渲染 web-view）
+  // 统一走站内中转页
   uni.navigateTo({ url: `/pages/webview/index?url=${encodeURIComponent(target)}` })
 }
 
@@ -475,19 +476,11 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .page {
-  max-width: 550px;
-  margin: 0 auto;
   background: #F5F6FA;
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-
-  @media (min-width: 551px) {
-    box-shadow: 0 0 40rpx rgba(0, 0, 0, 0.1);
-    border-radius: 20rpx;
-    overflow: hidden;
-  }
 }
 
 /* ====== 顶部蓝色区域 ====== */

@@ -48,7 +48,17 @@ export default {
           return new Response('Forbidden: host not allowed -> ' + target.hostname, { status: 403 })
         }
 
-        // TODO: 统计点击 / 同步订单追踪（env.PV_KV?.put 或 fetch 后端）
+        // 统计点击（先打印到控制台，后续可换 KV / 后端落库）
+        const productId = m[1]
+        console.log('[product-click]', {
+          time: new Date().toISOString(),
+          product_id: productId,
+          target: target.toString(),
+          referer: request.headers.get('referer') || '',
+          ua: request.headers.get('user-agent') || '',
+          ip: request.headers.get('cf-connecting-ip') || '',
+          country: request.cf && request.cf.country || '',
+        })
 
         return Response.redirect(target.toString(), 302)
       }

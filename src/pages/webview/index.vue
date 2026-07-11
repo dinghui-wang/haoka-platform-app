@@ -1,120 +1,76 @@
 <!--
-  商品详情 webview 中转页
-  - H5：渲染 <iframe>（你的号卡详情页允许 iframe 嵌套）
-  - 小程序/App：渲染 uni-app 的 <web-view> 组件
-  - 接收的 url 形如：https://bk.kahone.top/p/{id}?to={编码后的真实链接}
-    该 URL 在 CF Function 端做白名单校验后 302 跳到真实运营商页
-  - 顶栏始终是 bk.kahone.top，外部真实链接不暴露
+  商品详情中转页
+  - H5：显示"正在跳转"反馈，随后 window.location.href 同标签跳到中转地址
+        顶栏会短暂显示 bk.kahone.top/p/{id}?to=... 再 302 到真实运营商页
+  - 小程序/App：用 <web-view> 加载中转地址（这两端没有 location.href 外跳能力）
+  - 接收 url 形如：https://bk.kahone.top/p/{id}?to={编码后的真实链接}
 -->
+<template>
+  <view class="webview-page">
+    <!-- #ifdef MP-WEIXIN || APP-PLUS -->
+    <view class="wb-header">
+      <view class="wb-back" @click="goBack">‹</view>
+      <view class="wb-title">商品详情</view>
+      <view class="wb-close" @click="goHome">✕</view>
+    </view>
+    <web-view class="wb-frame" :src="realUrl" />
+    <!-- #endif -->
+
+    <!-- #ifdef H5 -->
+    <view class="wb-redirect">
+      <view class="wb-spinner" />
+      <view class="wb-redirect-title">正在为您跳转商品详情</view>
+      <view class="wb-redirect-sub">即将打开运营商页面…</view>
+      <a class="wb-redirect-btn" :href="realUrl" rel="noopener noreferrer">立即跳转</a>
+      <view class="wb-redirect-tip">如未自动跳转，请点击上方按钮</view>
+    </view>
+    <!-- #endif -->
+  </view>
+</template>
+
 <script setup>
 import { ref, onMounted } from 'vue'
 import { onLoad, onBackPress } from '@dcloudio/uni-app'
 
 const realUrl = ref('')
-const title = ref('')
-const loading = ref(true)
-const error = ref('')
 
-// onLoad 兼容 H5：从 query.url 取（uni 在 H5 下通常通过 onLoad 入参取；这里加兜底）
 onLoad((options = {}) => {
-  const u = options.url || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('url') : '')
-  if (!u) {
-    error.value = '缺少 url 参数'
-    loading.value = false
-    return
-  }
+  const u =
+    options.url ||
+    (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('url') : '')
+  if (!u) return
   realUrl.value = u
-  title.value = options.title || '商品详情'
-  // H5 端 onload 在 iframe 加载完成后由下面事件触发
-  loading.value = false
 })
 
-// H5：监听 iframe onload 关闭 loading，onerror 显示错误
 onMounted(() => {
   // #ifdef H5
-  const f = document.querySelector('iframe.wb-frame')
-  if (f) {
-    f.addEventListener('load', () => { loading.value = false })
-    f.addEventListener('error', () => {
-      loading.value = false
-      error.value = '运营商页面无法加载，请稍后重试'
-    })
-  }
+  if (!realUrl.value) return
+  // 短暂延迟，让"跳转中"反馈可见，再同标签跳走
+  setTimeout(() => {
+    window.location.href = realUrl.value
+  }, 600)
   // #endif
 })
 
-function reload() {
-  error.value = ''
-  loading.value = true
-  // 重新给 src 赋值触发刷新
-  realUrl.value = realUrl.value + (realUrl.value.includes('?') ? '&' : '?') + '_t=' + Date.now()
-}
-
 function goBack() {
-  // #ifdef H5
-  if (window.history.length > 1) window.history.back()
-  else window.location.href = '/'
-  // #endif
-  // #ifdef MP-WEIXIN || APP-PLUS
   uni.navigateBack({ delta: 1, fail: () => uni.redirectTo({ url: '/pages/index/index' }) })
-  // #endif
 }
-
 function goHome() {
-  // #ifdef H5
-  window.location.href = '/'
-  // #endif
-  // #ifdef MP-WEIXIN || APP-PLUS
   uni.reLaunch({ url: '/pages/index/index' })
-  // #endif
 }
-
-// 拦截物理返回（小程序/App）
-onBackPress(() => { goBack() })
+onBackPress(() => {
+  goBack()
+  return true
+})
 </script>
-
-<template>
-  <view class="webview-page">
-    <!-- 顶部固定头（与全局店铺风格保持一致） -->
-    <view class="wb-header">
-      <view class="wb-back" @click="goBack">‹</view>
-      <view class="wb-title">{{ title || '商品详情' }}</view>
-      <view class="wb-close" @click="goHome">✕</view>
-    </view>
-
-    <!-- H5：用原生 iframe；小程序/APP：走条件编译的 <web-view> -->
-    <!-- #ifdef H5 -->
-    <iframe class="wb-frame" :src="realUrl" frameborder="0" referrerpolicy="no-referrer-when-downgrade"
-      allow="fullscreen" />
-    <!-- #endif -->
-
-    <!-- #ifdef MP-WEIXIN || APP-PLUS -->
-    <web-view class="wb-frame" :src="realUrl" />
-    <!-- #endif -->
-
-    <!-- 加载态/空态/失败态 -->
-    <view v-if="loading" class="wb-mask">
-      <view class="wb-loading">加载中…</view>
-    </view>
-    <view v-if="error" class="wb-mask">
-      <view class="wb-error">
-        <view class="wb-error-title">页面加载失败</view>
-        <view class="wb-error-sub">{{ error }}</view>
-        <view class="wb-error-btn" @click="reload">重试</view>
-      </view>
-    </view>
-  </view>
-</template>
 
 <style lang="scss" scoped>
 .webview-page {
   position: fixed;
   inset: 0;
-  display: flex;
-  flex-direction: column;
   background: #fff;
 }
-
+/* #ifdef MP-WEIXIN || APP-PLUS */
 .wb-header {
   height: 44px;
   display: flex;
@@ -123,75 +79,77 @@ onBackPress(() => { goBack() })
   background: linear-gradient(135deg, #4A9FF5, #6BB6FF);
   color: #fff;
   flex: 0 0 auto;
-  z-index: 10;
 }
-
 .wb-back,
 .wb-close {
   width: 80rpx;
   text-align: center;
   font-size: 36rpx;
   line-height: 44px;
-  cursor: pointer;
 }
-
 .wb-title {
   flex: 1;
   text-align: center;
   font-size: 32rpx;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
-
 .wb-frame {
-  flex: 1 1 auto;
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
-  border: 0;
-  background: #fff;
 }
+/* #endif */
 
-.wb-mask {
-  position: fixed;
-  inset: 44px 0 0 0;
-  background: rgba(255, 255, 255, 0.92);
+/* #ifdef H5 */
+.wb-redirect {
+  position: absolute;
+  inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 5;
+  padding: 60rpx;
+  background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 100%);
 }
-
-.wb-loading {
-  font-size: 28rpx;
-  color: #666;
+.wb-spinner {
+  width: 72rpx;
+  height: 72rpx;
+  border: 6rpx solid #dbe9ff;
+  border-top-color: #4A9FF5;
+  border-radius: 50%;
+  animation: wb-spin 0.9s linear infinite;
+  margin-bottom: 40rpx;
 }
-
-.wb-error {
-  text-align: center;
-  padding: 40rpx;
+@keyframes wb-spin {
+  to { transform: rotate(360deg); }
 }
-
-.wb-error-title {
-  font-size: 32rpx;
+.wb-redirect-title {
+  font-size: 34rpx;
   font-weight: 600;
-  color: #333;
+  color: #222;
   margin-bottom: 16rpx;
 }
-
-.wb-error-sub {
-  font-size: 24rpx;
-  color: #999;
-  margin-bottom: 32rpx;
-  word-break: break-all;
+.wb-redirect-sub {
+  font-size: 26rpx;
+  color: #888;
+  margin-bottom: 56rpx;
 }
-
-.wb-error-btn {
+.wb-redirect-btn {
   display: inline-block;
-  padding: 16rpx 48rpx;
+  padding: 20rpx 80rpx;
   background: #4A9FF5;
   color: #fff;
-  border-radius: 40rpx;
-  font-size: 28rpx;
+  border-radius: 48rpx;
+  font-size: 30rpx;
+  text-decoration: none;
 }
+.wb-redirect-tip {
+  margin-top: 32rpx;
+  font-size: 24rpx;
+  color: #bbb;
+}
+/* #endif */
 </style>

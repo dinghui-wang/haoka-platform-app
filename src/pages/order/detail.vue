@@ -200,8 +200,6 @@ function goBack() {
 <style lang="scss" scoped>
 .detail-page {
     min-height: 100vh;
-    max-width: 550px;
-    margin: 0 auto;
     background: #F2F4F8;
 }
 

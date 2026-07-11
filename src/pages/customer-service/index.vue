@@ -216,8 +216,6 @@ export default {
 
 <style lang="scss" scoped>
 .page {
-    max-width: 550px;
-    margin: 0 auto;
     background: #F5F6FA;
     min-height: 100vh;
     display: flex;

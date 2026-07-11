@@ -249,8 +249,6 @@ function goDetail(order) {
 <style lang="scss" scoped>
 /* ========== 页面容器 ========== */
 .page {
-  max-width: 550px;
-  margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -708,7 +706,6 @@ function goDetail(order) {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 550px;
   height: 110rpx;
   background: #FFFFFF;
   display: flex;
