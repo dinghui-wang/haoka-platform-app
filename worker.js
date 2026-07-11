@@ -7,13 +7,19 @@
  */
 
 const ALLOW_LIST = [
-  '10010.com',               // 联通
-  '10086.cn',                // 移动
-  '189.cn',                  // 电信
-  '10000.cn',                // 电信备用
+  // 运营商主域
+  // '10010.com',               // 联通
+  // '10086.cn',                // 移动
+  // '189.cn',                  // 电信
+  // '10000.cn',                // 电信备用
+  // '10099.com.cn',            // 广电
   'chinabridgebroadband.com',
-  '10099.com.cn',            // 广电
-  // TODO: 把你实际合作的号卡运营商店铺域名都列进来
+  // 第三方号卡 / 卡盟 / 推广平台（按你实际合作情况补全）
+  'yapingkeji.com',          // 示例：请替换/补充
+  // 'wanka.com',               // 示例
+  // 'chuangkit.com',           // 示例
+  // 'haoka.com',               // 示例
+  // TODO: 把你真实合作的所有号卡店铺 / 推广平台域名都列进来
 ]
 
 function isAllowHost(host) {

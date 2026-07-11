@@ -6,47 +6,6 @@
     该 URL 在 CF Function 端做白名单校验后 302 跳到真实运营商页
   - 顶栏始终是 bk.kahone.top，外部真实链接不暴露
 -->
-<template>
-  <view class="webview-page">
-    <!-- 顶部固定头（与全局店铺风格保持一致） -->
-    <view class="wb-header">
-      <view class="wb-back" @click="goBack">‹</view>
-      <view class="wb-title">{{ title || '商品详情' }}</view>
-      <view class="wb-close" @click="goHome">✕</view>
-    </view>
-
-    <!-- H5：用原生 iframe；小程序/APP：走条件编译的 <web-view> -->
-    <!-- #ifdef H5 -->
-    <iframe
-      class="wb-frame"
-      :src="realUrl"
-      frameborder="0"
-      referrerpolicy="no-referrer-when-downgrade"
-      allow="fullscreen"
-    />
-    <!-- #endif -->
-
-    <!-- #ifdef MP-WEIXIN || APP-PLUS -->
-    <web-view
-      class="wb-frame"
-      :src="realUrl"
-    />
-    <!-- #endif -->
-
-    <!-- 加载态/空态/失败态 -->
-    <view v-if="loading" class="wb-mask">
-      <view class="wb-loading">加载中…</view>
-    </view>
-    <view v-if="error" class="wb-mask">
-      <view class="wb-error">
-        <view class="wb-error-title">页面加载失败</view>
-        <view class="wb-error-sub">{{ error }}</view>
-        <view class="wb-error-btn" @click="reload">重试</view>
-      </view>
-    </view>
-  </view>
-</template>
-
 <script setup>
 import { ref, onMounted } from 'vue'
 import { onLoad, onBackPress } from '@dcloudio/uni-app'
@@ -114,6 +73,39 @@ function goHome() {
 onBackPress(() => { goBack() })
 </script>
 
+<template>
+  <view class="webview-page">
+    <!-- 顶部固定头（与全局店铺风格保持一致） -->
+    <view class="wb-header">
+      <view class="wb-back" @click="goBack">‹</view>
+      <view class="wb-title">{{ title || '商品详情' }}</view>
+      <view class="wb-close" @click="goHome">✕</view>
+    </view>
+
+    <!-- H5：用原生 iframe；小程序/APP：走条件编译的 <web-view> -->
+    <!-- #ifdef H5 -->
+    <iframe class="wb-frame" :src="realUrl" frameborder="0" referrerpolicy="no-referrer-when-downgrade"
+      allow="fullscreen" />
+    <!-- #endif -->
+
+    <!-- #ifdef MP-WEIXIN || APP-PLUS -->
+    <web-view class="wb-frame" :src="realUrl" />
+    <!-- #endif -->
+
+    <!-- 加载态/空态/失败态 -->
+    <view v-if="loading" class="wb-mask">
+      <view class="wb-loading">加载中…</view>
+    </view>
+    <view v-if="error" class="wb-mask">
+      <view class="wb-error">
+        <view class="wb-error-title">页面加载失败</view>
+        <view class="wb-error-sub">{{ error }}</view>
+        <view class="wb-error-btn" @click="reload">重试</view>
+      </view>
+    </view>
+  </view>
+</template>
+
 <style lang="scss" scoped>
 .webview-page {
   position: fixed;
@@ -122,6 +114,7 @@ onBackPress(() => { goBack() })
   flex-direction: column;
   background: #fff;
 }
+
 .wb-header {
   height: 44px;
   display: flex;
@@ -132,13 +125,16 @@ onBackPress(() => { goBack() })
   flex: 0 0 auto;
   z-index: 10;
 }
-.wb-back, .wb-close {
+
+.wb-back,
+.wb-close {
   width: 80rpx;
   text-align: center;
   font-size: 36rpx;
   line-height: 44px;
   cursor: pointer;
 }
+
 .wb-title {
   flex: 1;
   text-align: center;
@@ -148,41 +144,48 @@ onBackPress(() => { goBack() })
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .wb-frame {
   flex: 1 1 auto;
   width: 100%;
   border: 0;
   background: #fff;
 }
+
 .wb-mask {
   position: fixed;
   inset: 44px 0 0 0;
-  background: rgba(255,255,255,0.92);
+  background: rgba(255, 255, 255, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 5;
 }
+
 .wb-loading {
   font-size: 28rpx;
   color: #666;
 }
+
 .wb-error {
   text-align: center;
   padding: 40rpx;
 }
+
 .wb-error-title {
   font-size: 32rpx;
   font-weight: 600;
   color: #333;
   margin-bottom: 16rpx;
 }
+
 .wb-error-sub {
   font-size: 24rpx;
   color: #999;
   margin-bottom: 32rpx;
   word-break: break-all;
 }
+
 .wb-error-btn {
   display: inline-block;
   padding: 16rpx 48rpx;
