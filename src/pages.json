@@ -40,6 +40,14 @@
 				"navigationStyle": "custom",
 				"navigationBarTitleText": ""
 			}
+		},
+		{
+			"path": "pages/webview/index",
+			"style": {
+				"navigationBarTitleText": "商品详情",
+				"navigationBarBackgroundColor": "#4A9FF5",
+				"navigationBarTextStyle": "white"
+			}
 		}
 	],
 	"globalStyle": {

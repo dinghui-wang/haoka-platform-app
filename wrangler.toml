@@ -1,5 +1,7 @@
 name = "haoka-platform-app"
-compatibility_date = "2026-07-09"
+compatibility_date = "2026-07-11"
+# Worker 入口：处理 /p/:id 中转，并回落到静态资源
+main = "worker.js"
 
 [assets]
 directory = "./dist/build/h5"

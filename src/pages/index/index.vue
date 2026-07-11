@@ -226,16 +226,20 @@ function clearKeyword() {
   fetchProducts(true)
 }
 
-// 跳转商品详情（跳外链）
+// 跳转商品详情（站内 webview 中转）
+// 走 https://bk.kahone.top/p/{id}?to=编码后的真实链接
+// CF Pages Function 会校验白名单后 302 跳到运营商页
+// H5/小程序/App 都用站内 webview 容器承载，顶栏始终是 bk.kahone.top
 function goDetail(product) {
-  if (product.main_link) {
-    // #ifdef H5
-    window.open(product.main_link)
-    // #endif
-    // #ifdef MP-WEIXIN || APP-PLUS
-    uni.navigateTo({ url: `/pages/webview/index?url=${encodeURIComponent(product.main_link)}` })
-    // #endif
-  }
+  if (!product.main_link) return
+  const origin = (typeof window !== 'undefined' && window.location && window.location.origin) || ''
+  // 开发环境（dev: h5）后端暂不在线、未部署 Function 时，直接用原链接，避开 404
+  const isDev = !import.meta.env.PROD
+  const target = isDev
+    ? product.main_link
+    : `${origin}/p/${product.id}?to=${encodeURIComponent(product.main_link)}`
+  // 统一走站内 webview 页面（H5 渲染 iframe，小程序/App 渲染 web-view）
+  uni.navigateTo({ url: `/pages/webview/index?url=${encodeURIComponent(target)}` })
 }
 
 // ========== TabBar ==========
