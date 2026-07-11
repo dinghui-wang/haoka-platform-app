@@ -227,20 +227,14 @@ function clearKeyword() {
 }
 
 // 跳转商品详情（站内中转页）
-// 走 https://bk.kahone.top/p/{id}?to=编码后的真实链接
-// CF Worker 会校验白名单后 302 跳到真实运营商页
-// H5：中转页显示"跳转中"后 location.href 同标签跳走（顶栏短暂显示 bk.kahone.top/p/... 再跳运营商）
-// 小程序/App：中转页用 <web-view> 加载
+// 直接打开 main_link 真实链接；中转页负责"跳转中"反馈 + 上报点击到 Worker
+// H5：location.href 同标签打开 main_link
+// 小程序/App：<web-view> 加载 main_link
 function goDetail(product) {
   if (!product.main_link) return
-  const origin = (typeof window !== 'undefined' && window.location && window.location.origin) || ''
-  // 开发环境（dev: h5）后端暂不在线、未部署 Function 时，直接用原链接，避开 404
-  const isDev = !import.meta.env.PROD
-  const target = isDev
-    ? product.main_link
-    : `${origin}/p/${product.id}?to=${encodeURIComponent(product.main_link)}`
-  // 统一走站内中转页
-  uni.navigateTo({ url: `/pages/webview/index?url=${encodeURIComponent(target)}` })
+  uni.navigateTo({
+    url: `/pages/webview/index?url=${encodeURIComponent(product.main_link)}&id=${encodeURIComponent(product.id || '')}`,
+  })
 }
 
 // ========== TabBar ==========

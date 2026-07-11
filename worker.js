@@ -28,7 +28,21 @@ export default {
     try {
       const url = new URL(request.url)
 
-      // 商品详情中转：/p/{id}?to={编码后的真实链接}
+      // 点击上报：/track?id=XX&to=YY（图片 GET 触发，仅记录到控制台，不跳转）
+      if (url.pathname === '/track' && request.method === 'GET') {
+        console.log('[product-click]', {
+          time: new Date().toISOString(),
+          product_id: url.searchParams.get('id') || '',
+          target: url.searchParams.get('to') || '',
+          referer: request.headers.get('referer') || '',
+          ua: request.headers.get('user-agent') || '',
+          ip: request.headers.get('cf-connecting-ip') || '',
+          country: (request.cf && request.cf.country) || '',
+        })
+        return new Response(null, { status: 204 })
+      }
+
+      // 商品详情中转：/p/{id}?to={编码后的真实链接}（备用，仍可用）
       const m = url.pathname.match(/^\/p\/([^/]+)\/?$/)
       if (m && request.method === 'GET') {
         const to = url.searchParams.get('to')

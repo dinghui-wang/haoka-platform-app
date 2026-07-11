@@ -1,9 +1,8 @@
 <!--
   商品详情中转页
-  - H5：显示"正在跳转"反馈，随后 window.location.href 同标签跳到中转地址
-        顶栏会短暂显示 bk.kahone.top/p/{id}?to=... 再 302 到真实运营商页
-  - 小程序/App：用 <web-view> 加载中转地址（这两端没有 location.href 外跳能力）
-  - 接收 url 形如：https://bk.kahone.top/p/{id}?to={编码后的真实链接}
+  - H5：显示"正在跳转"反馈，先发 /track 上报点击，随后 window.location.href 直接打开 main_link
+  - 小程序/App：用 <web-view> 直接加载 main_link（这两端没有 location.href 外跳能力）
+  - 接收 url = main_link 真实链接，id = 商品 id（用于点击上报）
 -->
 <template>
   <view class="webview-page">
@@ -33,19 +32,29 @@ import { ref, onMounted } from 'vue'
 import { onLoad, onBackPress } from '@dcloudio/uni-app'
 
 const realUrl = ref('')
+const productId = ref('')
 
 onLoad((options = {}) => {
   const u =
     options.url ||
     (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('url') : '')
-  if (!u) return
-  realUrl.value = u
+  if (u) realUrl.value = u
+  productId.value = options.id || ''
 })
 
 onMounted(() => {
   // #ifdef H5
   if (!realUrl.value) return
-  // 短暂延迟，让"跳转中"反馈可见，再同标签跳走
+  // 生产环境：先用图片 GET 触发 Worker /track 上报点击（console.log），不阻塞跳转
+  if (import.meta.env.PROD && productId.value) {
+    try {
+      const img = new Image()
+      img.src = `/track?id=${encodeURIComponent(productId.value)}&to=${encodeURIComponent(realUrl.value)}&_t=${Date.now()}`
+    } catch (e) {
+      // 上报失败不影响跳转
+    }
+  }
+  // 短暂延迟，让"跳转中"反馈可见，再同标签直接打开 main_link
   setTimeout(() => {
     window.location.href = realUrl.value
   }, 600)
