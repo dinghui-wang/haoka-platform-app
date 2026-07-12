@@ -93,14 +93,14 @@ function goDetail(order) {
       <!-- 搜索卡片 -->
       <view class="search-card">
         <view class="search-title">
-          <text class="title-icon">📋</text>
+          <uni-icons class="title-icon" type="notification" size="36rpx" color="#1A1A2E" />
           <text class="title-text">订单查询</text>
         </view>
         <view class="input-row">
-          <text class="input-prefix">📱</text>
+          <uni-icons class="input-prefix" type="phone" size="30rpx" color="#333333" />
           <input class="phone-input" type="number" v-model="phone" placeholder="请输入收货人手机号" placeholder-class="input-ph"
             maxlength="11" confirm-type="search" @confirm="doSearch" />
-          <text v-if="phone" class="clear-icon" @click="clearPhone">✕</text>
+          <uni-icons v-if="phone" class="clear-icon" type="close" size="26rpx" color="#CCCCCC" @click="clearPhone" />
         </view>
         <button class="search-btn" :class="{ loading: searching }" @click="doSearch">
           {{ searching ? '查询中...' : '立即查询' }}
@@ -114,7 +114,7 @@ function goDetail(order) {
       <!-- 未搜索 -->
       <view v-if="!hasSearched" class="empty-hint">
         <view class="empty-illustration">
-          <text class="ill-main">🔍</text>
+          <uni-icons class="ill-main" type="search" size="100rpx" color="#CCCCCC" />
           <text class="ill-sub">输入手机号开始查询</text>
         </view>
       </view>
@@ -145,7 +145,7 @@ function goDetail(order) {
           <!-- 产品信息 -->
           <view class="card-product">
             <view class="cp-icon-wrap">
-              <text class="cp-icon">📶</text>
+              <uni-icons class="cp-icon" type="phone" size="44rpx" color="#5B8DEF" />
             </view>
             <view class="cp-info">
               <text class="cp-name">{{ order.productName }}</text>
@@ -159,23 +159,23 @@ function goDetail(order) {
           <view class="card-rows">
             <!-- 收货人 -->
             <view class="row-item">
-              <text class="row-icon">👤</text>
+              <uni-icons class="row-icon" type="person" size="24rpx" color="#888888" />
               <text class="row-label">收货人</text>
               <text class="row-value">{{ order.receiverName }}　{{ order.receiverPhone }}</text>
             </view>
             <view class="row-item" v-if="order.receiverIdCard">
-              <text class="row-icon">🆔</text>
+              <uni-icons class="row-icon" type="auth" size="24rpx" color="#888888" />
               <text class="row-label">身份证</text>
               <text class="row-value mono">{{ order.receiverIdCard }}</text>
             </view>
             <view class="row-item" v-if="order.address">
-              <text class="row-icon">📍</text>
+              <uni-icons class="row-icon" type="location" size="24rpx" color="#888888" />
               <text class="row-label">收货地址</text>
               <text class="row-value ellipsis-2">{{ order.region }} {{ order.address }}</text>
             </view>
             <!-- 物流 -->
             <view class="row-item" v-if="order.logisticsCompany || order.trackingNo">
-              <text class="row-icon">🚚</text>
+              <uni-icons class="row-icon" type="paperplane" size="24rpx" color="#888888" />
               <text class="row-label">物流</text>
               <text class="row-value">
                 {{ order.logisticsCompany || '—' }}
@@ -184,7 +184,7 @@ function goDetail(order) {
             </view>
             <!-- 首充 -->
             <view class="row-item" v-if="order.firstRechargeAt">
-              <text class="row-icon">⚡</text>
+              <uni-icons class="row-icon" type="wallet" size="24rpx" color="#888888" />
               <text class="row-label">首充</text>
               <text class="row-value">
                 {{ order.firstRechargeAt }}
@@ -193,13 +193,13 @@ function goDetail(order) {
             </view>
             <!-- 完成时间 -->
             <view class="row-item" v-if="order.completedAt">
-              <text class="row-icon">✅</text>
+              <uni-icons class="row-icon" type="checkmarkempty" size="24rpx" color="#888888" />
               <text class="row-label">完成时间</text>
               <text class="row-value">{{ order.completedAt }}</text>
             </view>
             <!-- 取消原因 -->
             <view class="row-item cancel" v-if="order.cancelledAt && order.cancelReason">
-              <text class="row-icon">⚠️</text>
+              <uni-icons class="row-icon" type="info-filled" size="24rpx" color="#E86A17" />
               <text class="row-label">取消原因</text>
               <text class="row-value">{{ order.cancelReason }}</text>
             </view>
@@ -216,7 +216,7 @@ function goDetail(order) {
 
         <!-- 无结果 -->
         <view v-if="hasSearched && !searching && orders.length === 0" class="no-result">
-          <text class="nr-icon">📭</text>
+          <uni-icons class="nr-icon" type="email-filled" size="90rpx" color="#CCCCCC" />
           <text class="nr-text">未找到相关订单</text>
           <text class="nr-tip">请检查手机号是否正确</text>
         </view>
@@ -240,7 +240,7 @@ function goDetail(order) {
 /* ========== 渐变头部 ========== */
 .header-area {
   position: relative;
-  background: linear-gradient(135deg, #5B8DEF, #7B68EE);
+  background: $brand-gradient;
   padding: 80rpx 32rpx 60rpx;
   overflow: hidden;
 }
@@ -353,7 +353,7 @@ function goDetail(order) {
   font-size: 30rpx;
   font-weight: 700;
   color: #FFFFFF;
-  background: linear-gradient(135deg, #5B8DEF, #7B68EE);
+  background: $brand-gradient;
   border-radius: 44rpx;
   border: none;
   letter-spacing: 4rpx;
@@ -525,7 +525,7 @@ function goDetail(order) {
   width: 96rpx;
   height: 96rpx;
   border-radius: 16rpx;
-  background: linear-gradient(135deg, #EDF2FF, #E8EBFF);
+  background: $brand-gradient-soft;
   display: flex;
   align-items: center;
   justify-content: center;

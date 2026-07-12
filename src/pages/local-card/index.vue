@@ -97,7 +97,7 @@ function formatSoldCount(count) {
         <!-- 归属地选择区域 -->
         <view class="region-selector">
             <view class="region-label">
-                <text class="location-icon">📍</text>
+                <uni-icons class="location-icon" type="location" size="32rpx" color="#5B8DEF" />
                 <text class="label-text">归属地</text>
                 <text class="required">*</text>
             </view>
@@ -152,7 +152,7 @@ function formatSoldCount(count) {
 
                         <view class="bottom-row">
                             <view class="sold-info">
-                                <text class="fire-icon">🔥</text>
+                                <uni-icons class="fire-icon" type="fire-filled" size="26rpx" color="#E5484D" />
                                 <text class="sold-text">已领取{{ formatSoldCount(card.soldCount) }}件</text>
                             </view>
                             <view class="apply-btn" @click="onApply(card)">
@@ -448,7 +448,7 @@ function formatSoldCount(count) {
 }
 
 .apply-btn {
-    background: linear-gradient(135deg, #5B8DEF, #7B68EE);
+    background: $brand-gradient;
     padding: 14rpx 32rpx;
     border-radius: 30rpx;
 

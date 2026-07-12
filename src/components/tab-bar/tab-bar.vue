@@ -2,7 +2,7 @@
   <view class="custom-tabbar">
     <view class="tabbar-item" v-for="(tab, index) in tabs" :key="index" :class="{ active: current === index }"
       @click="handleTab(index)">
-      <text class="tabbar-icon">{{ tab.icon }}</text>
+      <uni-icons class="tabbar-icon" :type="tab.iconType" size="42rpx" :color="current === index ? '#5B8DEF' : '#999999'" />
       <text class="tabbar-text">{{ tab.text }}</text>
     </view>
   </view>
@@ -18,10 +18,10 @@ const props = defineProps({
 })
 
 const tabs = [
-  { icon: '🏠', text: '首页', url: '/pages/index/index' },
-  { icon: '📋', text: '订单', url: '/pages/order/index' },
-  { icon: '👤', text: '本地号卡', url: '/pages/local-card/index' },
-  { icon: '🎧', text: '客服', url: '/pages/customer-service/index' },
+  { iconType: 'home', text: '首页', url: '/pages/index/index' },
+  { iconType: 'list', text: '订单', url: '/pages/order/index' },
+  { iconType: 'location', text: '本地号卡', url: '/pages/local-card/index' },
+  { iconType: 'headphones', text: '客服', url: '/pages/customer-service/index' },
 ]
 
 function handleTab(index) {

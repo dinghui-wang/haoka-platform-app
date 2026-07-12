@@ -44,7 +44,7 @@ function goBack() {
         <!-- ====== 顶栏 ====== -->
         <view class="top-bar">
             <view class="back-btn" @click="goBack">
-                <text class="back-icon">‹</text>
+                <uni-icons class="back-icon" type="back" size="40rpx" color="#333333" />
             </view>
             <view class="top-title">订单详情</view>
             <view class="top-spacer"></view>
@@ -55,7 +55,7 @@ function goBack() {
             <!-- 产品卡片 -->
             <view class="product-card">
                 <view class="pc-icon-wrap">
-                    <text class="pc-icon">📶</text>
+                    <uni-icons class="pc-icon" type="phone-filled" size="44rpx" color="#5B8DEF" />
                 </view>
                 <view class="pc-right">
                     <text class="pc-name">{{ detail.productName }}</text>
@@ -189,7 +189,7 @@ function goBack() {
 
         <!-- 无数据 -->
         <view v-else class="empty-area">
-            <text class="ea-icon">😕</text>
+            <uni-icons class="ea-icon" type="info" size="90rpx" color="#CCCCCC" />
             <text class="ea-text">订单详情不存在</text>
             <text class="ea-tip">请从订单列表重新进入</text>
             <button class="ea-btn" @click="goBack">返回列表</button>
@@ -266,7 +266,7 @@ function goBack() {
     width: 96rpx;
     height: 96rpx;
     border-radius: 16rpx;
-    background: linear-gradient(135deg, #EDF2FF, #E8EBFF);
+    background: $brand-gradient-soft;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -342,7 +342,7 @@ function goBack() {
             transform: translateY(-50%);
             width: 6rpx;
             height: 26rpx;
-            background: linear-gradient(180deg, #5B8DEF, #7B68EE);
+            background: $brand-gradient-v;
             border-radius: 3rpx;
         }
     }
@@ -449,7 +449,7 @@ function goBack() {
     font-size: 26rpx;
     font-weight: 600;
     color: #fff;
-    background: linear-gradient(135deg, #5B8DEF, #7B68EE);
+    background: $brand-gradient;
     border-radius: 36rpx;
     border: none;
 

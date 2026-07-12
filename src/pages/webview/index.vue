@@ -9,9 +9,9 @@
   <view class="webview-page">
     <!-- H5 + 小程序/App 统一头部 -->
     <!-- <view class="wb-header">
-      <view class="wb-back" @click="goBack">‹</view>
+      <uni-icons class="wb-back" type="back" size="36rpx" color="#FFFFFF" @click="goBack" />
       <view class="wb-title">商品详情</view>
-      <view class="wb-close" @click="goHome">✕</view>
+      <uni-icons class="wb-close" type="close" size="36rpx" color="#FFFFFF" @click="goHome" />
     </view> -->
 
     <!-- #ifdef H5 -->
@@ -110,7 +110,7 @@ onBackPress(() => {
   display: flex;
   align-items: center;
   padding: 0 12rpx;
-  background: linear-gradient(135deg, #5B8DEF, #7B68EE);
+  background: $brand-gradient;
   color: #fff;
   flex: 0 0 auto;
   z-index: 10;

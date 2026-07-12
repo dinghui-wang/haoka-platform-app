@@ -87,6 +87,18 @@ $brand-light: #EDF2FF;                                 // 浅蓝底
 $brand-light-2: #E8EBFF;                               // 浅紫底
 $brand-shadow: rgba(91, 141, 239, 0.25);               // 品牌投影
 
+/* 渐变体系（品牌渐变的变体 + 语义/功能渐变，集中管理、单一来源，避免散落字面量）
+ * 主品牌渐变 $brand-gradient / 浅渐变 $brand-gradient-soft 见上方品牌块。 */
+$brand-gradient-v: linear-gradient(180deg, #5B8DEF, #7B68EE);          // 品牌竖渐变（蓝→紫·竖向）
+$brand-gradient-tint: linear-gradient(135deg, rgba(91, 141, 239, 0.12), rgba(123, 104, 238, 0.12)); // 品牌淡光渐变
+$brand-gradient-soft-2: linear-gradient(135deg, #EEF2FF 0%, #E6EBFF 45%, #EDF0FF 100%); // 品牌浅渐变（三色过渡）
+
+$hot-gradient: linear-gradient(135deg, #FF7A45, #FF4D4F);              // 暖橙渐变（活动 / 热门标签）
+$hot-badge-gradient: linear-gradient(90deg, #FF6B6B, #E5484D);         // 红渐变（HOT 角标）
+$wechat-gradient: linear-gradient(135deg, #09BB07, #2AFF29);           // 微信绿渐变（联系客服按钮）
+$orange-gradient: linear-gradient(135deg, #FFB347, #FFCC80);           // 浅橙渐变（备用）
+$shine-gradient: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%); // 流光高光
+
 /* 语义色（统一规范，避免一色多值） */
 $semantic-success: #52C41A;                            // 成功/可用
 $semantic-warning: #FA8C16;                            // 警示/优惠

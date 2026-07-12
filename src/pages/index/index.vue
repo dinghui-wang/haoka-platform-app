@@ -35,10 +35,10 @@ function stopNoticeScroll() {
 
 // ========== 核心权益卖点 ==========
 const benefits = ref([
-  { icon: '🛡️', text: '官方授权正品' },
-  { icon: '🚚', text: '全国包邮到家' },
-  { icon: '💳', text: '0元免费领卡' },
-  { icon: '♻️', text: '随时免费注销' },
+  { iconType: 'auth', iconColor: '#5B8DEF', text: '官方授权正品' },
+  { iconType: 'paperplane', iconColor: '#7B68EE', text: '全国包邮到家' },
+  { iconType: 'gift', iconColor: '#E5484D', text: '0元免费领卡' },
+  { iconType: 'trash', iconColor: '#2BB673', text: '随时免费注销' },
 ])
 
 // ========== 人气推荐卡片 ==========
@@ -298,33 +298,50 @@ onMounted(() => {
 onUnmounted(() => {
   stopNoticeScroll()
 })
+
+// 头部右侧入口：聚焦到搜索框
+function goSearch() {
+  uni.showToast({ title: '搜索功能开发中', icon: 'none' })
+}
+
+// 头部右侧入口：通知中心
+function goNotice() {
+  uni.showToast({ title: '暂无新通知', icon: 'none' })
+}
 </script>
 
 <template>
   <view class="page">
-    <!-- 顶部深红/紫红渐变背景区域 -->
+    <!-- 顶部品牌头部：浅蓝紫渐变 + 品牌徽标 + 实用入口 -->
     <view class="header-bg">
+      <!-- 装饰光斑：左上 + 右下两个柔光球，弱化单色平铺感 -->
+      <view class="header-glow header-glow--tl"></view>
+      <view class="header-glow header-glow--br"></view>
+
       <view class="header-content">
-        <!-- 左侧：红蓝渐变胶囊Logo -->
+        <!-- 左侧：品牌徽标 + 标题区 -->
         <view class="logo-pill">
           <view class="logo-icon">
-            <view class="logo-inner">
-              <text class="logo-text-5g">5G</text>
-              <view class="logo-wifi"><text>)))</text></view>
-            </view>
+              <view class="logo-inner">
+                <text class="logo-text-5g">5G</text>
+              </view>
           </view>
           <view class="logo-text-group">
             <text class="main-title">号卡精选商城</text>
-            <text class="sub-title">精选套餐·号卡大全·畅销正品</text>
+            <view class="sub-title-row">
+              <text class="sub-title">精选套餐·号卡大全·畅销正品</text>
+            </view>
           </view>
         </view>
-        <!-- 右侧：脉冲动画图标 -->
+
+        <!-- 右侧：搜索 + 通知 分段胶囊（紧凑表达） -->
         <view class="header-actions">
-          <view class="action-icon pulse-star">
-            <text class="action-icon-text">⭐</text>
+          <view class="action-seg" @click="goSearch">
+            <uni-icons class="action-seg-icon" type="search" size="28rpx" color="#5B8DEF" />
           </view>
-          <view class="action-icon pulse-sparkle">
-            <text class="action-icon-text">✦</text>
+          <view class="action-seg action-seg--bell" @click="goNotice">
+            <uni-icons class="action-seg-icon" type="notification" size="28rpx" color="#5B8DEF" />
+            <view class="action-dot"></view>
           </view>
         </view>
       </view>
@@ -337,10 +354,9 @@ onUnmounted(() => {
       <view class="center-card">
         <view class="center-header">
           <view class="center-logo">
-            <view class="logo-inner">
-              <text class="logo-text-5g">5G</text>
-              <view class="logo-wifi"><text>)))</text></view>
-            </view>
+              <view class="logo-inner">
+                <text class="logo-text-5g">5G</text>
+              </view>
           </view>
           <view class="center-info">
             <text class="center-title">5G号卡官方办理中心</text>
@@ -350,7 +366,7 @@ onUnmounted(() => {
         <view class="benefit-strip">
           <view class="benefit-item" v-for="(item, index) in benefits" :key="index">
             <view class="benefit-icon">
-              <text class="benefit-icon-text">{{ item.icon }}</text>
+              <uni-icons class="benefit-icon-text" :type="item.iconType" size="32rpx" :color="item.iconColor" />
             </view>
             <text class="benefit-text">{{ item.text }}</text>
           </view>
@@ -398,8 +414,8 @@ onUnmounted(() => {
       </view>
 
       <!-- 通知提示条 -->
-      <view class="notice-bar">
-        <view class="notice-icon"><text>🔊</text></view>
+        <view class="notice-bar">
+          <view class="notice-icon"><uni-icons type="sound" size="28rpx" color="#5B8DEF" /></view>
         <view class="notice-scroll-container">
           <view class="notice-scroll-content" :style="{ transform: `translateY(${noticeTransformY}rpx)` }">
             <text class="notice-text" v-for="(item, index) in noticeList" :key="index">{{ item }}</text>
@@ -421,14 +437,14 @@ onUnmounted(() => {
       <!-- 搜索栏和筛选 -->
       <view class="search-filter-bar">
         <view class="search-box">
-          <text class="search-icon">🔍</text>
+          <uni-icons class="search-icon" type="search" size="28rpx" color="#888888" />
           <input class="search-input" type="text" v-model="keyword" placeholder="搜你想办的套餐"
             placeholder-class="search-placeholder" confirm-type="search" @input="onSearchInput"
             @confirm="fetchProducts(true)" />
-          <text v-if="keyword" class="search-clear" @click="clearKeyword">✕</text>
+          <uni-icons v-if="keyword" class="search-clear" type="close" size="28rpx" color="#888888" @click="clearKeyword" />
         </view>
         <view class="filter-btn">
-          <text class="filter-icon">☰</text>
+          <uni-icons class="filter-icon" type="bars" size="32rpx" color="#1A1A2E" />
         </view>
       </view>
 
@@ -445,7 +461,7 @@ onUnmounted(() => {
           <view class="product-image-wrapper">
             <image class="product-image" :src="product.main_image" mode="aspectFill" lazy-load></image>
             <view class="product-hot" v-if="product.hot">
-              <text>🔥</text>
+              <uni-icons type="fire-filled" size="36rpx" color="#FF4D4F" />
             </view>
             <view class="product-operator-badge">
               <text class="operator-badge-text">{{ product.operatorShort }}</text>
@@ -529,148 +545,185 @@ onUnmounted(() => {
 /* ====== 顶部浅色品牌渐变区域 ====== */
 .header-bg {
   position: relative;
-  background: linear-gradient(135deg, #EDF2FF 0%, #E8EBFF 100%);
+  /* 主色保持：浅蓝紫；多停一站让色彩更立体 */
+  background: $brand-gradient-soft;
   padding-top: 60rpx;
   padding-bottom: 120rpx;
   overflow: hidden;
 }
 
+/* 装饰光斑：两个柔光球丰富层次，颜色取自品牌蓝/紫 */
+.header-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40rpx);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.header-glow--tl {
+  top: -80rpx;
+  left: -80rpx;
+  width: 280rpx;
+  height: 280rpx;
+  background: rgba(91, 141, 239, 0.22);
+}
+
+.header-glow--br {
+  bottom: -120rpx;
+  right: -60rpx;
+  width: 240rpx;
+  height: 240rpx;
+  background: rgba(123, 104, 238, 0.18);
+}
+
 .header-content {
   position: relative;
+  z-index: 2;                          // 浮在装饰光斑之上
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 40rpx 30rpx;
-  z-index: 2;
+  padding: 40rpx 32rpx 0;
 }
 
-/* ====== 左侧胶囊Logo ====== */
+/* ====== 左侧品牌徽标 ====== */
 .logo-pill {
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  background: linear-gradient(135deg, #5B8DEF, #7B68EE);
-  padding: 16rpx 28rpx;
-  border-radius: $radius-pill;
-  box-shadow: 0 4rpx 14rpx rgba(91, 141, 239, 0.22);
+  gap: 20rpx;
+  flex: 1;
+  min-width: 0;                        // 允许子项收缩
 }
 
 .logo-icon {
-  width: 72rpx;
-  height: 72rpx;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 16rpx;
+  position: relative;
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 24rpx;
+  background: $brand-gradient;
+  box-shadow: 0 6rpx 18rpx rgba(91, 141, 239, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 1rpx solid rgba(255, 255, 255, 0.2);
 }
 
 .logo-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
+  line-height: 1;
 }
 
 .logo-text-5g {
-  font-size: 22rpx;
-  font-weight: bold;
+  font-size: 24rpx;
+  font-weight: 800;
   color: #FFFFFF;
-}
-
-.logo-wifi {
-  font-size: 14rpx;
-  color: rgba(255, 255, 255, 0.8);
-  letter-spacing: -2rpx;
+  letter-spacing: 1rpx;
 }
 
 .logo-text-group {
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
+  gap: 6rpx;
+  min-width: 0;
 }
 
 .main-title {
-  font-size: 36rpx;
-  font-weight: bold;
+  font-size: 38rpx;
+  font-weight: 800;
   color: $text-primary;
-  letter-spacing: 2rpx;
+  letter-spacing: 1rpx;
+  line-height: 1.2;
+}
+
+.sub-title-row {
+  display: flex;
+  align-items: center;
 }
 
 .sub-title {
   font-size: 22rpx;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(31, 31, 36, 0.55);       // 比原来略深一档，对比更舒服
+  letter-spacing: 0.5rpx;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;             // 长标题优雅截断
 }
 
-/* ====== 右侧脉冲动画图标 ====== */
+/* ====== 右侧实用入口：搜索 + 通知（紧凑分段胶囊） ====== */
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  flex-shrink: 0;
+  height: 52rpx;
+  padding: 0 6rpx;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1rpx solid rgba(91, 141, 239, 0.18);
+  border-radius: $radius-pill;
+  backdrop-filter: blur(8rpx);
+  -webkit-backdrop-filter: blur(8rpx);
+  box-shadow: 0 2rpx 10rpx rgba(91, 141, 239, 0.12);
 }
 
-.action-icon {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.05);
-  border: 1rpx solid rgba(0, 0, 0, 0.06);
+.action-seg {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-}
+  width: 56rpx;
+  height: 100%;
+  transition: transform 0.2s ease;
 
-.action-icon-text {
-  font-size: 32rpx;
-  color: #5A4A52;
-}
-
-.pulse-star {
-  animation: pulse-star 2s ease-in-out infinite;
-}
-
-.pulse-sparkle {
-  animation: pulse-sparkle 2.5s ease-in-out infinite 0.5s;
-}
-
-@keyframes pulse-star {
-
-  0%,
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(91, 141, 239, 0.25);
+  &:active {
+    transform: scale(0.88);
   }
 
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 0 0 8rpx rgba(91, 141, 239, 0);
+  // 中间分隔细线
+  & + &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1rpx;
+    height: 22rpx;
+    background: rgba(91, 141, 239, 0.22);
   }
 }
 
-@keyframes pulse-sparkle {
+.action-seg-icon {
+  font-size: 28rpx;
+  color: $brand-blue;
+  line-height: 1;
+  font-weight: 600;
+}
 
-  0%,
-  100% {
-    transform: scale(1) rotate(0deg);
-    box-shadow: 0 0 0 0 rgba(127, 209, 176, 0.25);
-  }
-
-  50% {
-    transform: scale(1.05) rotate(45deg);
-    box-shadow: 0 0 0 8rpx rgba(127, 209, 176, 0);
+.action-seg--bell {
+  // 通知段右上小红点
+  .action-dot {
+    position: absolute;
+    top: 9rpx;
+    right: 11rpx;
+    width: 12rpx;
+    height: 12rpx;
+    background: #FF5A5F;
+    border-radius: 50%;
+    border: 2rpx solid #FFFFFF;
   }
 }
 
 /* ====== 波浪底部 ====== */
 .wave-bottom {
   position: absolute;
-  bottom: 0;
+  bottom: -1rpx;                      // 避免 hairline 1px 漏白
   left: 0;
   right: 0;
-  height: 60rpx;
+  height: 48rpx;
   background: $page-bg;
-  border-radius: 100% 100% 0 0 / 100%;
+  border-radius: 100% 100% 0 0 / 200%;
+  z-index: 1;
 }
 
 /* ====== 主内容区 ====== */
@@ -707,7 +760,7 @@ onUnmounted(() => {
 .center-logo {
   width: 80rpx;
   height: 80rpx;
-  background: linear-gradient(135deg, rgba(91, 141, 239, 0.12), rgba(123, 104, 238, 0.12));
+  background: $brand-gradient-tint;
   border-radius: 16rpx;
   display: flex;
   align-items: center;
@@ -833,7 +886,7 @@ onUnmounted(() => {
 }
 
 .rec-header-hot {
-  background: linear-gradient(135deg, #FF7A45, #FF4D4F);
+  background: $hot-gradient;
   padding: 2rpx 12rpx;
   border-radius: 6rpx;
   transform: skewX(-8deg);
@@ -903,7 +956,7 @@ onUnmounted(() => {
 .rec-hot-badge {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(90deg, #FF6B6B, #E5484D);
+  background: $hot-badge-gradient;
   padding: 2rpx 8rpx;
   border-radius: 6rpx;
   box-shadow: 0 2rpx 8rpx rgba(229, 72, 77, 0.4);
@@ -917,7 +970,7 @@ onUnmounted(() => {
     left: -120%;
     width: 70%;
     height: 100%;
-    background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+    background: $shine-gradient;
     transform: skewX(-20deg);
     animation: hotShine 2.4s ease-in-out infinite;
   }
@@ -1039,8 +1092,10 @@ onUnmounted(() => {
 /* ====== 分类标签栏 ====== */
 .category-tabs {
   position: relative;                  // 让指示椭圆可绝对定位
-  margin: 24rpx 24rpx 0;
+  margin: 22rpx 22rpx 0;
   display: flex;
+  align-items: stretch;                 // 每个 tab 拉满高度，与椭圆等高
+  height: 96rpx;                        // 显式总高，椭圆与 tab 共用同一基准
   background: $card-bg;
   border: 1rpx solid $card-border;
   border-radius: $radius-pill;
@@ -1048,6 +1103,7 @@ onUnmounted(() => {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   padding: 8rpx;
+  box-sizing: border-box;               // 边框算入宽度，杜绝百分比偏移
 }
 
 /* 滑动指示椭圆：唯一会移动的元素，靠 transform 缓动滑到目标 tab */
@@ -1063,18 +1119,19 @@ onUnmounted(() => {
   box-shadow: 0 2rpx 10rpx rgba(91, 141, 239, 0.22);
   z-index: 0;
   pointer-events: none;
-  transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;             // 边框算入宽度，椭圆外框与 tab 完全重合
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tab-item {
   position: relative;
   z-index: 1;                          // 文字压在指示椭圆之上
   flex: 1;
+  height: 100%;                        // 撑满父级内容区，与指示椭圆严格等高
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 14rpx 8rpx;
+  align-items: center;                 // 水平居中
+  justify-content: center;              // 垂直居中
   border-radius: $radius-pill;
 }
 
@@ -1216,7 +1273,7 @@ onUnmounted(() => {
   position: absolute;
   top: 16rpx;
   left: 16rpx;
-  background: linear-gradient(135deg, $accent-primary, $accent-red);
+  background: $brand-gradient;
   padding: 6rpx 16rpx;
   border-radius: $radius-pill;
   box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.18);
@@ -1348,7 +1405,7 @@ onUnmounted(() => {
   font-size: 26rpx;
   font-weight: bold;
   color: #FFFFFF;
-  background: linear-gradient(135deg, $accent-primary, $accent-red);
+  background: $brand-gradient;
   padding: 16rpx 36rpx;
   border-radius: $radius-pill;
   letter-spacing: 2rpx;

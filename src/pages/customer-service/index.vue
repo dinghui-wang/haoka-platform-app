@@ -99,36 +99,36 @@ function copyWechat() {
             <!-- 客服卡片 -->
             <view class="service-card">
                 <view class="service-header">
-                    <text class="service-icon">🎧</text>
+                    <uni-icons class="service-icon" type="headphones" size="44rpx" color="#5B8DEF" />
                     <text class="service-title">客服中心</text>
                 </view>
 
                 <view class="contact-methods">
                     <view class="contact-item" @click="makePhoneCall">
                         <view class="contact-icon phone">
-                            <text class="icon-text">📞</text>
+                            <uni-icons type="phone-filled" size="32rpx" color="#FFFFFF" />
                         </view>
                         <view class="contact-info">
                             <text class="contact-label">客服热线</text>
                             <text class="contact-value">{{ contactInfo.phone }}</text>
                         </view>
-                        <text class="contact-arrow">›</text>
+                        <uni-icons class="contact-arrow" type="forward" size="32rpx" color="#CCCCCC" />
                     </view>
 
                     <view class="contact-item" @click="copyWechat">
                         <view class="contact-icon wechat">
-                            <text class="icon-text">💬</text>
+                            <uni-icons type="weixin" size="32rpx" color="#FFFFFF" />
                         </view>
                         <view class="contact-info">
                             <text class="contact-label">微信客服</text>
                             <text class="contact-value">{{ contactInfo.wechat }}</text>
                         </view>
-                        <text class="contact-arrow">›</text>
+                        <uni-icons class="contact-arrow" type="forward" size="32rpx" color="#CCCCCC" />
                     </view>
 
                     <view class="contact-item">
                         <view class="contact-icon hours">
-                            <text class="icon-text">⏰</text>
+                            <uni-icons type="calendar-filled" size="32rpx" color="#FFFFFF" />
                         </view>
                         <view class="contact-info">
                             <text class="contact-label">服务时间</text>
@@ -148,7 +148,9 @@ function copyWechat() {
                     <view class="faq-item" v-for="(faq, index) in faqList" :key="index" @click="toggleFaq(index)">
                         <view class="faq-question">
                             <text class="question-text">{{ faq.question }}</text>
-                            <text class="question-arrow" :class="{ expanded: showFaqIndex === index }">›</text>
+                            <view class="question-arrow" :class="{ expanded: showFaqIndex === index }">
+                                <uni-icons type="forward" size="28rpx" color="#999999" />
+                            </view>
                         </view>
                         <view class="faq-answer" v-if="showFaqIndex === index">
                             <text class="answer-text">{{ faq.answer }}</text>
@@ -188,7 +190,7 @@ function copyWechat() {
 }
 
 .header-bg {
-    background: linear-gradient(135deg, #5B8DEF, #7B68EE);
+    background: $brand-gradient;
     padding: 60rpx 30rpx 40rpx;
 }
 
@@ -270,15 +272,15 @@ function copyWechat() {
     flex-shrink: 0;
 
     &.phone {
-        background: linear-gradient(135deg, #5B8DEF, #7B68EE);
+        background: $brand-gradient;
     }
 
     &.wechat {
-        background: linear-gradient(135deg, #09BB07, #2AFF29);
+        background: $wechat-gradient;
     }
 
     &.hours {
-        background: linear-gradient(135deg, #FFB347, #FFCC80);
+        background: $orange-gradient;
     }
 }
 
@@ -402,7 +404,7 @@ function copyWechat() {
 
 .feedback-btn {
     margin-top: 20rpx;
-    background: linear-gradient(135deg, #5B8DEF, #7B68EE);
+    background: $brand-gradient;
     color: #FFFFFF;
     font-size: 28rpx;
     font-weight: 600;
