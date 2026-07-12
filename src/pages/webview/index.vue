@@ -8,11 +8,11 @@
 <template>
   <view class="webview-page">
     <!-- H5 + 小程序/App 统一头部 -->
-    <view class="wb-header">
+    <!-- <view class="wb-header">
       <view class="wb-back" @click="goBack">‹</view>
       <view class="wb-title">商品详情</view>
       <view class="wb-close" @click="goHome">✕</view>
-    </view>
+    </view> -->
 
     <!-- #ifdef H5 -->
     <iframe
