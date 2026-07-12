@@ -444,7 +444,7 @@ function goNotice() {
           <uni-icons v-if="keyword" class="search-clear" type="close" size="28rpx" color="#888888" @click="clearKeyword" />
         </view>
         <view class="filter-btn">
-          <uni-icons class="filter-icon" type="bars" size="32rpx" color="#1A1A2E" />
+          <uni-icons class="filter-icon" type="list" size="32rpx" color="#1A1A2E" />
         </view>
       </view>
 
