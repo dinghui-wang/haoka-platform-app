@@ -33,15 +33,21 @@ function stopNoticeScroll() {
   }
 }
 
-// ========== 功能入口 ==========
-const features = ref([
-  { icon: '🏷️', name: '6月推荐', sub: '热门套餐', bgColor: 'linear-gradient(135deg, #FFB347, #FFCC80)' },
-  { icon: '📱', name: '大流量卡', sub: '192G号卡', bgColor: 'linear-gradient(135deg, #4A9FF5, #81C4FF)' },
-  { icon: '🎁', name: '19元月租', sub: '首月免费', bgColor: 'linear-gradient(135deg, #FF6B8A, #FFA0B0)' },
-  { icon: '🔗', name: '分享店铺', sub: '终身号卡服务', bgColor: 'linear-gradient(135deg, #FF9966, #FFBB80)' },
+// ========== 核心权益卖点 ==========
+const benefits = ref([
+  { icon: '🛡️', text: '官方授权正品' },
+  { icon: '🚚', text: '全国包邮到家' },
+  { icon: '💳', text: '0元免费领卡' },
+  { icon: '♻️', text: '随时免费注销' },
 ])
 
-// ========== 推荐卡片（从商品列表取前3条） ==========
+// ========== 人气推荐卡片 ==========
+// 注意：人气推荐区与下方「分类标签 + 商品列表」是相互独立的模块。
+// 目前后端尚未提供专属的推荐接口，临时复用 getProductList，
+// 取返回结果的前 4 条作为推荐位数据。
+// 后续待后端单独提供「人气推荐」接口后，仅需替换下方 fetchRecommendCards 内部的请求实现，
+// 上层 UI（recommend-section）无需改动。
+const RECOMMEND_LIMIT = 4 // 推荐位固定取前 4 条
 const recommendCards = ref([])
 
 // 运营商颜色配置
@@ -115,14 +121,13 @@ function transformToProduct(item) {
     carrier,
     operatorShort: CARRIER_MAP[carrier] || '未知',
     data: String(d.general_traffic || 0),
-    detail: `${d.general_traffic || 0}G通用流量${d.voice_minutes ? '+' + d.voice_minutes + '分钟通话' : ''}`,
     title: item.name,
     price: d.current_monthly || 0,
     originalPrice: d.origin_monthly || 0,
     commission: d.commission || 0,
     ageRange,
     tag1: ageRange,
-    tag2: d.recharge_desc ? d.recharge_desc.slice(0, 15) : '',
+    tag2: d.recharge_desc || '',
     hot: d.commission >= 100,
     metas: [
       d.is_need_idcard ? '需身份证' : '自主激活',
@@ -184,16 +189,45 @@ async function fetchProducts(reset = false) {
       products.value.push(...transformed)
     }
     total.value = totalVal || transformed.length
-
-    // 推荐卡片取前3条
-    if (reset && transformed.length > 0) {
-      recommendCards.value = list.slice(0, 3).map(item => transformToRecommendCard(item))
-    }
   } catch (e) {
     console.error('获取商品列表失败', e)
     uni.showToast({ title: '加载失败，请重试', icon: 'none' })
   } finally {
     loading.value = false
+  }
+}
+
+// ========== 人气推荐（独立模块） ==========
+// 该函数只负责「人气爆款推荐」区的渲染数据，
+// 与分类标签切换、搜索、分页加载等逻辑完全解耦，
+// 因此切换分类标签时推荐区不会跟着变化。
+async function fetchRecommendCards() {
+  try {
+    // 临时方案：复用商品列表接口，不传 carrier（即不区分运营商），取前 4 条。
+    // TODO: 后续替换为后端专属的人气推荐接口，例如 getRecommendProducts()。
+    const res = await getProductList({
+      page: 1,
+      page_size: RECOMMEND_LIMIT, // 仅取前 4 条
+    })
+
+    // 兼容多种返回格式（与 fetchProducts 保持一致）
+    let list = []
+    if (Array.isArray(res)) {
+      list = res
+    } else if (res?.list) {
+      list = res.list
+    } else if (res?.data?.list) {
+      list = res.data.list
+    } else if (Array.isArray(res?.data)) {
+      list = res.data
+    }
+
+    // 取接口返回的前 4 条，转换为推荐卡片
+    recommendCards.value = list
+      .slice(0, RECOMMEND_LIMIT)
+      .map(item => transformToRecommendCard(item))
+  } catch (e) {
+    console.error('获取人气推荐失败', e)
   }
 }
 
@@ -255,29 +289,9 @@ function goDetail(product) {
   })
 }
 
-// ========== TabBar ==========
-const currentTabbar = ref(0)
-const tabbarItems = ref([
-  { icon: '🏠', text: '店铺首页' },
-  { icon: '📋', text: '订单查询' },
-  { icon: '👤', text: '本地号卡' },
-  { icon: '🎧', text: '在线客服' },
-])
-
-function switchTab(index) {
-  if (index === 0) {
-    currentTabbar.value = index
-  } else if (index === 1) {
-    uni.redirectTo({ url: '/pages/order/index' })
-  } else if (index === 2) {
-    uni.redirectTo({ url: '/pages/local-card/index' })
-  } else if (index === 3) {
-    uni.redirectTo({ url: '/pages/customer-service/index' })
-  }
-}
-
 onMounted(() => {
-  fetchProducts(true)
+  fetchProducts(true)        // 分类商品列表（受分类标签影响）
+  fetchRecommendCards()      // 人气推荐（独立加载，不受分类切换影响）
   startNoticeScroll()
 })
 
@@ -288,28 +302,30 @@ onUnmounted(() => {
 
 <template>
   <view class="page">
-    <!-- 顶部蓝色背景区域 -->
+    <!-- 顶部深红/紫红渐变背景区域 -->
     <view class="header-bg">
       <view class="header-content">
-        <view class="title-wrapper">
-          <view class="title-decoration left">
-            <text class="deco-text">❧</text>
+        <!-- 左侧：红蓝渐变胶囊Logo -->
+        <view class="logo-pill">
+          <view class="logo-icon">
+            <view class="logo-inner">
+              <text class="logo-text-5g">5G</text>
+              <view class="logo-wifi"><text>)))</text></view>
+            </view>
           </view>
-          <text class="main-title">号卡精选商城</text>
-          <view class="title-decoration right">
-            <text class="deco-text">❧</text>
-          </view>
-        </view>
-        <text class="sub-title">精选套餐·号卡大全·畅销正品</text>
-
-        <view class="decoration-phone">
-          <view class="phone-icon">
-            <view class="phone-screen"></view>
-            <view class="phone-home"></view>
+          <view class="logo-text-group">
+            <text class="main-title">号卡精选商城</text>
+            <text class="sub-title">精选套餐·号卡大全·畅销正品</text>
           </view>
         </view>
-        <view class="decoration-wifi">
-          <text class="wifi-icon">📶</text>
+        <!-- 右侧：脉冲动画图标 -->
+        <view class="header-actions">
+          <view class="action-icon pulse-star">
+            <text class="action-icon-text">⭐</text>
+          </view>
+          <view class="action-icon pulse-sparkle">
+            <text class="action-icon-text">✦</text>
+          </view>
         </view>
       </view>
       <view class="wave-bottom"></view>
@@ -331,55 +347,54 @@ onUnmounted(() => {
             <text class="center-desc">四大运营商授权 官方正品保障</text>
           </view>
         </view>
-        <view class="feature-grid">
-          <view class="feature-item" v-for="(item, index) in features" :key="index">
-            <view class="feature-icon" :style="{ background: item.bgColor }">
-              <text class="feature-icon-text">{{ item.icon }}</text>
+        <view class="benefit-strip">
+          <view class="benefit-item" v-for="(item, index) in benefits" :key="index">
+            <view class="benefit-icon">
+              <text class="benefit-icon-text">{{ item.icon }}</text>
             </view>
-            <text class="feature-name">{{ item.name }}</text>
-            <text class="feature-sub">{{ item.sub }}</text>
+            <text class="benefit-text">{{ item.text }}</text>
           </view>
         </view>
       </view>
 
       <!-- 人气推荐区域 -->
       <view class="recommend-section" v-if="recommendCards.length">
-        <view class="recommend-body">
-          <!-- 左侧标题区 -->
-          <view class="recommend-left">
-            <text class="rec-title-text">人气</text>
-            <text class="rec-title-text">推荐</text>
-            <view class="rec-sim-icon">
-              <text class="sim-chip"></text>
+        <!-- 顶部标题行 -->
+        <view class="rec-header">
+          <view class="rec-header-left">
+            <text class="rec-header-title">人气爆款推荐</text>
+            <view class="rec-header-hot">
+              <text class="rec-header-hot-text">HOT</text>
             </view>
           </view>
-          <!-- 右侧卡片滚动 -->
-          <scroll-view scroll-x class="recommend-scroll" :show-scrollbar="false">
-            <view class="rec-card" v-for="(card, index) in recommendCards" :key="index"
-              :style="{ background: card.bgColor }" @click="goDetail(card)">
-              <!-- 顶部：运营商 + HOT -->
-              <view class="rec-card-top">
-                <view class="rec-carrier-tag" :style="{ background: card.logoBg }">
-                  <text class="rec-carrier-text">{{ card.operator }}</text>
-                </view>
-                <view class="rec-hot-badge">
-                  <text class="rec-hot-text">HOT!</text>
-                </view>
+          <text class="rec-header-more">滑动查看更多 ›</text>
+        </view>
+        <!-- 下方卡片横滚 -->
+        <scroll-view scroll-x class="recommend-scroll" :show-scrollbar="false">
+          <view class="rec-card" v-for="(card, index) in recommendCards" :key="index"
+            :style="{ background: card.bgColor }" @click="goDetail(card)">
+            <!-- 顶部：运营商 + HOT -->
+            <view class="rec-card-top">
+              <view class="rec-carrier-tag" :style="{ background: card.logoBg }">
+                <text class="rec-carrier-text">{{ card.operator }}</text>
               </view>
-              <!-- 流量大字 -->
-              <view class="rec-flow-row">
-                <text class="rec-flow-num" :style="{ color: card.dataColor }">{{ card.data }}G</text>
-              </view>
-              <!-- 套餐名 -->
-              <text class="rec-plan-name">{{ card.name }}</text>
-              <!-- 底部信息 -->
-              <view class="rec-bottom-info">
-                <text class="rec-area">随机归属地</text>
-                <text class="rec-age" v-if="card.ageRange">{{ card.ageRange }}</text>
+              <view class="rec-hot-badge">
+                <text class="rec-hot-text">HOT!</text>
               </view>
             </view>
-          </scroll-view>
-        </view>
+            <!-- 流量大字 -->
+            <view class="rec-flow-row">
+              <text class="rec-flow-num" :style="{ color: card.dataColor }">{{ card.data }}G</text>
+            </view>
+            <!-- 套餐名 -->
+            <text class="rec-plan-name">{{ card.name }}</text>
+            <!-- 底部信息 -->
+            <view class="rec-bottom-info">
+              <text class="rec-area">随机归属地</text>
+              <text class="rec-age" v-if="card.ageRange">{{ card.ageRange }}</text>
+            </view>
+          </view>
+        </scroll-view>
       </view>
 
       <!-- 通知提示条 -->
@@ -394,9 +409,11 @@ onUnmounted(() => {
 
       <!-- 分类标签栏 -->
       <view class="category-tabs">
+        <!-- 滑动指示椭圆：单元素平移，切换时缓动滑到目标 tab -->
+        <view class="tab-indicator" :style="{ transform: `translateX(${currentTab * 100}%)` }"></view>
         <view class="tab-item" v-for="(tab, index) in categoryTabs" :key="index"
           :class="{ active: currentTab === index }" @click="switchCategory(index)">
-          <text class="tab-name" :class="{ active: currentTab === index }">{{ tab.name }}</text>
+          <text class="tab-name">{{ tab.name }}</text>
           <text class="tab-sub">{{ tab.sub }}</text>
         </view>
       </view>
@@ -405,14 +422,13 @@ onUnmounted(() => {
       <view class="search-filter-bar">
         <view class="search-box">
           <text class="search-icon">🔍</text>
-          <input class="search-input" type="text" v-model="keyword" placeholder="搜索商品名称"
+          <input class="search-input" type="text" v-model="keyword" placeholder="搜你想办的套餐"
             placeholder-class="search-placeholder" confirm-type="search" @input="onSearchInput"
             @confirm="fetchProducts(true)" />
           <text v-if="keyword" class="search-clear" @click="clearKeyword">✕</text>
         </view>
-        <view class="filter-btns">
-          <text class="filter-text">筛选 ⬇</text>
-          <text class="sort-text">排序 ⇅</text>
+        <view class="filter-btn">
+          <text class="filter-icon">☰</text>
         </view>
       </view>
 
@@ -423,29 +439,47 @@ onUnmounted(() => {
           <text class="loading-text">加载中...</text>
         </view>
 
-        <!-- 商品卡片 -->
+        <!-- 商品卡片：上图下文纵向布局 -->
         <view class="product-card" v-for="(product, index) in products" :key="product.id || index">
-          <!-- 左侧：商品主图 -->
-          <view class="product-left">
+          <!-- 顶部：商品主图 -->
+          <view class="product-image-wrapper">
             <image class="product-image" :src="product.main_image" mode="aspectFill" lazy-load></image>
-          </view>
-
-          <!-- 右侧：商品信息 -->
-          <view class="product-right">
             <view class="product-hot" v-if="product.hot">
               <text>🔥</text>
             </view>
+            <view class="product-operator-badge">
+              <text class="operator-badge-text">{{ product.operatorShort }}</text>
+            </view>
+          </view>
+
+          <!-- 底部：商品信息 -->
+          <view class="product-info">
             <text class="product-title">{{ product.title }}</text>
-            <view class="product-price-row">
-              <text class="product-price">{{ product.price }}</text>
-              <text class="product-price-unit">元/月</text>
-              <text class="product-original-price" v-if="product.originalPrice > product.price">
-                ¥{{ product.originalPrice }}/月</text>
+
+            <!-- 月租 + 流量 并列展示（月租在前） -->
+            <view class="product-stat-row">
+              <view class="stat-block stat-rent">
+                <text class="stat-symbol">¥</text>
+                <text class="stat-num">{{ product.price }}</text>
+                <text class="stat-unit">/月</text>
+              </view>
+              <text class="stat-original" v-if="product.originalPrice > product.price">
+                ¥{{ product.originalPrice }}/月
+              </text>
+              <view class="stat-divider"></view>
+              <view class="stat-block stat-flow">
+                <text class="stat-num">{{ product.data }}</text>
+                <text class="stat-unit">G</text>
+              </view>
             </view>
+
+            <!-- 标签（完整显示） -->
             <view class="product-tags">
-              <text class="tag-orange" v-if="product.tag1">{{ product.tag1 }}</text>
-              <text class="tag-green" v-if="product.tag2">{{ product.tag2 }}</text>
+              <text class="tag-glow" v-if="product.tag1">{{ product.tag1 }}</text>
+              <text class="tag-glow" v-if="product.tag2">{{ product.tag2 }}</text>
             </view>
+
+            <!-- 元信息 + 领取按钮 -->
             <view class="product-meta">
               <view class="meta-items">
                 <text class="meta-item" v-for="(meta, i) in product.metas" :key="i">{{ meta }}</text>
@@ -476,29 +510,26 @@ onUnmounted(() => {
     </scroll-view>
 
     <!-- 底部导航栏 -->
-    <view class="custom-tabbar">
-      <view class="tabbar-item" v-for="(tab, index) in tabbarItems" :key="index"
-        :class="{ active: currentTabbar === index }" @click="switchTab(index)">
-        <text class="tabbar-icon">{{ tab.icon }}</text>
-        <text class="tabbar-text">{{ tab.text }}</text>
-      </view>
-    </view>
+    <tab-bar :current="0" />
   </view>
 </template>
 
 <style lang="scss" scoped>
+/* 主题变量已集中收口于 src/uni.scss（页面基底 / 卡片 / 圆角 / 文字 / 强调色），此处直接复用 */
+
+/* ====== 页面基底 ====== */
 .page {
-  background: #F5F6FA;
+  background: $page-bg;
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
 }
 
-/* ====== 顶部蓝色区域 ====== */
+/* ====== 顶部浅色品牌渐变区域 ====== */
 .header-bg {
   position: relative;
-  background: linear-gradient(180deg, #7BC4F5 0%, #4A9FF5 50%, #3D8FE5 100%);
+  background: linear-gradient(135deg, #EDF2FF 0%, #E8EBFF 100%);
   padding-top: 60rpx;
   padding-bottom: 120rpx;
   overflow: hidden;
@@ -506,136 +537,34 @@ onUnmounted(() => {
 
 .header-content {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 40rpx 30rpx;
   z-index: 2;
 }
 
-.title-wrapper {
+/* ====== 左侧胶囊Logo ====== */
+.logo-pill {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 20rpx;
+  gap: 16rpx;
+  background: linear-gradient(135deg, #5B8DEF, #7B68EE);
+  padding: 16rpx 28rpx;
+  border-radius: $radius-pill;
+  box-shadow: 0 4rpx 14rpx rgba(91, 141, 239, 0.22);
 }
 
-.title-decoration .deco-text {
-  font-size: 48rpx;
-  color: rgba(255, 255, 255, 0.6);
-  font-weight: bold;
-}
-
-.title-decoration.right .deco-text {
-  transform: scaleX(-1);
-}
-
-.main-title {
-  font-size: 52rpx;
-  font-weight: bold;
-  color: #FFFFFF;
-  text-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
-  letter-spacing: 8rpx;
-}
-
-.sub-title {
-  display: block;
-  text-align: center;
-  margin-top: 16rpx;
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.95);
-  background: rgba(74, 159, 245, 0.8);
-  padding: 10rpx 36rpx;
-  border-radius: 30rpx;
-  width: fit-content;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.decoration-phone {
-  position: absolute;
-  left: 40rpx;
-  top: 140rpx;
-  opacity: 0.3;
-}
-
-.phone-icon {
-  width: 60rpx;
-  height: 110rpx;
-  border: 4rpx solid #fff;
-  border-radius: 12rpx;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 8rpx;
-}
-
-.phone-screen {
-  width: 100%;
-  height: 80rpx;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 4rpx;
-}
-
-.phone-home {
-  width: 24rpx;
-  height: 6rpx;
-  background: #fff;
-  border-radius: 3rpx;
-  margin: 8rpx auto 0;
-}
-
-.decoration-wifi {
-  position: absolute;
-  right: 50rpx;
-  top: 130rpx;
-  opacity: 0.35;
-}
-
-.wifi-icon {
-  font-size: 56rpx;
-}
-
-.wave-bottom {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60rpx;
-  background: #F5F6FA;
-  border-radius: 100% 100% 0 0 / 100%;
-}
-
-/* ====== 5G办理中心卡片 ====== */
-.main-content {
-  flex: 1;
-  margin-top: -50rpx;
-  overflow-y: auto;
-}
-
-.center-card {
-  margin: 0 24rpx;
-  background: #FFFFFF;
-  border-radius: 24rpx;
-  padding: 32rpx 24rpx;
-  box-shadow: 0 8rpx 32rpx rgba(74, 159, 245, 0.12);
-  position: relative;
-  z-index: 3;
-}
-
-.center-header {
-  display: flex;
-  align-items: center;
-  gap: 20rpx;
-  margin-bottom: 32rpx;
-  padding-bottom: 24rpx;
-  border-bottom: 1rpx solid #F0F2F5;
-}
-
-.center-logo {
-  width: 80rpx;
-  height: 80rpx;
-  background: linear-gradient(135deg, #E8F4FD, #C9E4FF);
+.logo-icon {
+  width: 72rpx;
+  height: 72rpx;
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  flex-shrink: 0;
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
 }
 
 .logo-inner {
@@ -647,13 +576,151 @@ onUnmounted(() => {
 .logo-text-5g {
   font-size: 22rpx;
   font-weight: bold;
-  color: #4A9FF5;
+  color: #FFFFFF;
 }
 
 .logo-wifi {
   font-size: 14rpx;
-  color: #4A9FF5;
+  color: rgba(255, 255, 255, 0.8);
   letter-spacing: -2rpx;
+}
+
+.logo-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.main-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: $text-primary;
+  letter-spacing: 2rpx;
+}
+
+.sub-title {
+  font-size: 22rpx;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* ====== 右侧脉冲动画图标 ====== */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.action-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1rpx solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-icon-text {
+  font-size: 32rpx;
+  color: #5A4A52;
+}
+
+.pulse-star {
+  animation: pulse-star 2s ease-in-out infinite;
+}
+
+.pulse-sparkle {
+  animation: pulse-sparkle 2.5s ease-in-out infinite 0.5s;
+}
+
+@keyframes pulse-star {
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(91, 141, 239, 0.25);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8rpx rgba(91, 141, 239, 0);
+  }
+}
+
+@keyframes pulse-sparkle {
+
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 0 0 0 rgba(127, 209, 176, 0.25);
+  }
+
+  50% {
+    transform: scale(1.05) rotate(45deg);
+    box-shadow: 0 0 0 8rpx rgba(127, 209, 176, 0);
+  }
+}
+
+/* ====== 波浪底部 ====== */
+.wave-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60rpx;
+  background: $page-bg;
+  border-radius: 100% 100% 0 0 / 100%;
+}
+
+/* ====== 主内容区 ====== */
+.main-content {
+  flex: 1;
+  margin-top: -50rpx;
+  overflow-y: auto;
+  padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
+}
+
+/* ====== 5G办理中心卡片 ====== */
+.center-card {
+  margin: 0 24rpx;
+  background: $card-bg;
+  border: 1rpx solid $card-border;
+  border-radius: $radius-card;
+  padding: 32rpx 24rpx;
+  box-shadow: $card-glow;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 3;
+}
+
+.center-header {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 32rpx;
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.center-logo {
+  width: 80rpx;
+  height: 80rpx;
+  background: linear-gradient(135deg, rgba(91, 141, 239, 0.12), rgba(123, 104, 238, 0.12));
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.center-logo .logo-text-5g {
+  color: $accent-gold;
+}
+
+.center-logo .logo-wifi {
+  color: $accent-gold;
 }
 
 .center-info {
@@ -663,122 +730,133 @@ onUnmounted(() => {
 .center-title {
   font-size: 32rpx;
   font-weight: bold;
-  color: #1A1A2E;
+  color: $text-primary;
   display: block;
 }
 
 .center-desc {
   font-size: 24rpx;
-  color: #4A9FF5;
+  color: $accent-gold;
   margin-top: 6rpx;
   display: block;
 }
 
-/* 功能入口网格 */
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16rpx;
+/* 核心权益卖点条 */
+.benefit-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 28rpx;
+  padding: 20rpx 16rpx;
+  border-radius: $radius-card;
+  background: rgba(0, 0, 0, 0.025);
+  border: 1rpx solid rgba(0, 0, 0, 0.05);
 }
 
-.feature-item {
+.benefit-item {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10rpx;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1rpx;
+    height: 44rpx;
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  &:last-child::after {
+    display: none;
+  }
 }
 
-.feature-icon {
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: 22rpx;
+.benefit-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.04);
+  border: 1rpx solid rgba(0, 0, 0, 0.05);
 }
 
-.feature-icon-text {
-  font-size: 44rpx;
+.benefit-icon-text {
+  font-size: 32rpx;
 }
 
-.feature-name {
-  font-size: 26rpx;
-  color: #1A1A2E;
-  font-weight: 600;
-}
-
-.feature-sub {
+.benefit-text {
   font-size: 22rpx;
-  color: #999;
+  color: $text-secondary;
+  text-align: center;
+  line-height: 1.2;
 }
 
-/* ====== 人气推荐 ====== */
+/* ====== 人气推荐（上下结构） ====== */
 .recommend-section {
   margin: 20rpx 24rpx 0;
-  background: #FFFFFF;
-  border-radius: 20rpx;
-  padding: 24rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+  background: $card-bg;
+  border: 1rpx solid $card-border;
+  border-radius: $radius-card;
+  padding: 24rpx 24rpx 28rpx;
+  box-shadow: $card-glow;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-.recommend-body {
+/* 顶部标题行 */
+.rec-header {
   display: flex;
-  align-items: stretch;
-  gap: 16rpx;
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-/* 左侧标题区 */
-.recommend-left {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4rpx;
-  padding: 12rpx 8rpx;
-  flex-shrink: 0;
-  width: 80rpx;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
 }
 
-.rec-title-text {
-  font-size: 30rpx;
+.rec-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.rec-header-title {
+  font-size: 32rpx;
   font-weight: 900;
-  color: #E8632A;
-  line-height: 1.2;
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  letter-spacing: 6rpx;
+  color: $text-primary;
+  letter-spacing: 1rpx;
 }
 
-.rec-sim-icon {
-  width: 48rpx;
-  height: 60rpx;
-  background: linear-gradient(135deg, #FFE8D0, #FFDDB8);
-  border-radius: 8rpx;
-  margin-top: 8rpx;
-  position: relative;
-  border: 2rpx solid #F5C99D;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.rec-header-hot {
+  background: linear-gradient(135deg, #FF7A45, #FF4D4F);
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  transform: skewX(-8deg);
+
+  .rec-header-hot-text {
+    display: block;
+    font-size: 20rpx;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 1rpx;
+    transform: skewX(8deg);
+  }
 }
 
-.sim-chip {
-  width: 24rpx;
-  height: 28rpx;
-  background: linear-gradient(180deg, #F5D89A, #E8B86D);
-  border-radius: 4rpx;
-  border: 1rpx solid #D4A85C;
+.rec-header-more {
+  font-size: 22rpx;
+  color: $text-secondary;
+  letter-spacing: 1rpx;
 }
 
-/* 右侧滚动区 */
+/* 横滚容器 */
 .recommend-scroll {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
 
@@ -787,7 +865,7 @@ onUnmounted(() => {
   }
 }
 
-/* 卡片 */
+/* 卡片（浅色，沿用各运营商渐变背景） */
 .rec-card {
   display: inline-flex;
   flex-direction: column;
@@ -823,16 +901,53 @@ onUnmounted(() => {
 }
 
 .rec-hot-badge {
-  background: linear-gradient(90deg, #FF6B35, #FF4444);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #FF6B6B, #E5484D);
   padding: 2rpx 8rpx;
   border-radius: 6rpx;
+  box-shadow: 0 2rpx 8rpx rgba(229, 72, 77, 0.4);
+  animation: hotPulse 1.6s ease-in-out infinite;
+
+  /* 斜向高光扫过 */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 70%;
+    height: 100%;
+    background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+    transform: skewX(-20deg);
+    animation: hotShine 2.4s ease-in-out infinite;
+  }
 }
 
 .rec-hot-text {
+  position: relative;
+  z-index: 1;
   font-size: 16rpx;
   font-weight: 900;
   color: #fff;
   letter-spacing: 1rpx;
+}
+
+/* 徽标呼吸脉冲 */
+@keyframes hotPulse {
+  0%, 100% {
+    box-shadow: 0 2rpx 8rpx rgba(229, 72, 77, 0.35);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 4rpx 16rpx rgba(229, 72, 77, 0.65);
+    transform: scale(1.08);
+  }
+}
+
+/* 高光扫光 */
+@keyframes hotShine {
+  0% { left: -120%; }
+  55%, 100% { left: 150%; }
 }
 
 /* 流量大字 */
@@ -849,7 +964,7 @@ onUnmounted(() => {
 /* 套餐名 */
 .rec-plan-name {
   font-size: 20rpx;
-  color: #666;
+  color: #555;
   margin-bottom: 10rpx;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -867,12 +982,12 @@ onUnmounted(() => {
 
 .rec-area {
   font-size: 18rpx;
-  color: #999;
+  color: #888;
 }
 
 .rec-age {
   font-size: 18rpx;
-  color: #999;
+  color: #888;
 }
 
 /* ====== 通知条 ====== */
@@ -881,11 +996,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12rpx;
-  background: linear-gradient(90deg, #FFF8F0, #FFFBF5);
-  border-radius: 12rpx;
-  border: 1rpx solid #FFE8D0;
+  background: rgba(91, 141, 239, 0.06);
+  border: 1rpx solid rgba(91, 141, 239, 0.12);
+  border-radius: 16rpx;
   overflow: hidden;
   height: 60rpx;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .notice-icon {
@@ -910,7 +1027,7 @@ onUnmounted(() => {
 
 .notice-text {
   font-size: 26rpx;
-  color: #D4790A;
+  color: $accent-gold;
   font-weight: 500;
   white-space: nowrap;
   height: 40rpx;
@@ -919,55 +1036,71 @@ onUnmounted(() => {
   text-overflow: ellipsis;
 }
 
-
-@keyframes scroll-left {
-  0% {
-    transform: translateX(0);
-  }
-
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
 /* ====== 分类标签栏 ====== */
 .category-tabs {
+  position: relative;                  // 让指示椭圆可绝对定位
   margin: 24rpx 24rpx 0;
   display: flex;
-  background: #FFFFFF;
-  border-radius: 16rpx;
+  background: $card-bg;
+  border: 1rpx solid $card-border;
+  border-radius: $radius-pill;
+  box-shadow: $card-glow;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding: 8rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.03);
+}
+
+/* 滑动指示椭圆：唯一会移动的元素，靠 transform 缓动滑到目标 tab */
+.tab-indicator {
+  position: absolute;
+  top: 8rpx;
+  bottom: 8rpx;
+  left: 8rpx;
+  width: calc((100% - 16rpx) / 5);     // 与每个 tab 等宽（共 5 个）
+  border: 2rpx solid $accent-primary;
+  border-radius: $radius-pill;
+  background: $card-bg;
+  box-shadow: 0 2rpx 10rpx rgba(91, 141, 239, 0.22);
+  z-index: 0;
+  pointer-events: none;
+  transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tab-item {
+  position: relative;
+  z-index: 1;                          // 文字压在指示椭圆之上
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16rpx 8rpx;
-  border-radius: 12rpx;
-  transition: all 0.2s;
-
-  &.active {
-    background: #4A9FF5;
-  }
+  justify-content: center;
+  padding: 14rpx 8rpx;
+  border-radius: $radius-pill;
 }
 
 .tab-name {
-  font-size: 28rpx;
-  color: #333;
-  font-weight: 600;
+  font-size: 26rpx;
+  color: $text-secondary;
+  font-weight: 500;
+  line-height: 1.2;
+  transition: color 0.34s ease, font-weight 0.34s ease;
 
-  &.active {
-    color: #fff;
+  .tab-item.active & {
+    color: $accent-primary;
+    font-weight: 700;
   }
 }
 
 .tab-sub {
   font-size: 20rpx;
-  color: #999;
+  color: rgba(0, 0, 0, 0.3);
   margin-top: 4rpx;
+  line-height: 1.2;
+  transition: color 0.34s ease;
+
+  .tab-item.active & {
+    color: rgba(91, 141, 239, 0.75);
+  }
 }
 
 /* ====== 搜索和筛选 ====== */
@@ -983,46 +1116,57 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12rpx;
-  background: #FFFFFF;
+  background: $card-bg;
+  border: 1rpx solid $card-border;
   padding: 16rpx 24rpx;
-  border-radius: 40rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  border-radius: $radius-pill;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .search-icon {
   font-size: 28rpx;
   flex-shrink: 0;
+  color: $text-secondary;
 }
 
 .search-input {
   flex: 1;
   font-size: 26rpx;
-  color: #333;
+  color: $text-primary;
 }
 
 .search-placeholder {
   font-size: 26rpx;
-  color: #BBBBBB;
+  color: rgba(0, 0, 0, 0.3);
 }
 
 .search-clear {
   font-size: 28rpx;
-  color: #CCCCCC;
+  color: $text-secondary;
   padding: 0 8rpx;
   flex-shrink: 0;
 }
 
-.filter-btns {
+.filter-btn {
+  flex-shrink: 0;
+  width: 72rpx;
+  height: 72rpx;
   display: flex;
-  gap: 16rpx;
-  white-space: nowrap;
+  align-items: center;
+  justify-content: center;
+  background: $card-bg;
+  border: 1rpx solid $card-border;
+  border-radius: 50%;
+  box-shadow: $card-glow;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-.filter-text,
-.sort-text {
-  font-size: 26rpx;
-  color: #555;
-  font-weight: 500;
+.filter-icon {
+  font-size: 32rpx;
+  color: $text-primary;
+  line-height: 1;
 }
 
 /* ====== 商品列表 ====== */
@@ -1035,140 +1179,182 @@ onUnmounted(() => {
 
 .product-card {
   display: flex;
-  background: #FFFFFF;
-  border-radius: 20rpx;
-  padding: 24rpx;
-  gap: 20rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  flex-direction: column;
+  background: $card-bg;
+  border: 1rpx solid $card-border;
+  border-radius: $radius-card;
+  overflow: hidden;
+  box-shadow: $card-glow;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   position: relative;
 }
 
-.product-left {
-  flex-shrink: 0;
+/* 商品图片区域 */
+.product-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 320rpx;
+  overflow: hidden;
 }
 
 .product-image {
-  width: 200rpx;
-  height: 200rpx;
-  border-radius: 16rpx;
-  background: #F5F6FA;
-}
-
-.product-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #EFEFF2;
 }
 
 .product-hot {
   position: absolute;
-  top: 0;
-  right: 0;
-  font-size: 32rpx;
+  top: 16rpx;
+  right: 16rpx;
+  font-size: 36rpx;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.5);
+}
+
+.product-operator-badge {
+  position: absolute;
+  top: 16rpx;
+  left: 16rpx;
+  background: linear-gradient(135deg, $accent-primary, $accent-red);
+  padding: 6rpx 16rpx;
+  border-radius: $radius-pill;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.18);
+}
+
+.operator-badge-text {
+  font-size: 20rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+/* 商品信息区域 */
+.product-info {
+  padding: 28rpx 24rpx;
+  display: flex;
+  flex-direction: column;
 }
 
 .product-title {
   font-size: 28rpx;
-  color: #1A1A2E;
+  color: $text-primary;
   font-weight: 600;
   line-height: 1.5;
-  -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-top: 8rpx;
-  padding-right: 40rpx;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  margin-bottom: 16rpx;
 }
 
-.product-price-row {
+/* 流量 + 月租 并列两栏 */
+.product-stat-row {
   display: flex;
   align-items: baseline;
-  gap: 6rpx;
-  margin-top: 12rpx;
+  gap: 16rpx;
+  margin-bottom: 14rpx;
 }
 
-.product-price {
-  font-size: 40rpx;
+.stat-block {
+  display: flex;
+  align-items: baseline;
+  gap: 2rpx;
+}
+
+.stat-num {
+  font-size: 44rpx;
   font-weight: 900;
-  color: #FF4D4F;
+  line-height: 1;
 }
 
-.product-price-unit {
+.stat-symbol {
   font-size: 22rpx;
-  color: #FF4D4F;
+  font-weight: bold;
+  margin-right: 2rpx;
+}
+
+.stat-unit {
+  font-size: 22rpx;
   font-weight: 600;
+  margin-left: 2rpx;
 }
 
-.product-original-price {
+/* 月租=品牌紫，流量=品牌蓝，各自纯色不混用，对比鲜明 */
+.stat-rent .stat-num,
+.stat-rent .stat-symbol,
+.stat-rent .stat-unit {
+  color: $accent-secondary;
+}
+
+.stat-flow .stat-num,
+.stat-flow .stat-unit {
+  color: $accent-primary;
+}
+
+.stat-divider {
+  width: 1rpx;
+  height: 32rpx;
+  background: rgba(0, 0, 0, 0.12);
+  align-self: center;
+}
+
+.stat-original {
   font-size: 22rpx;
-  color: #BBBBBB;
+  color: rgba(0, 0, 0, 0.3);
   text-decoration: line-through;
   margin-left: 8rpx;
 }
 
+/* 标签 */
 .product-tags {
   display: flex;
   gap: 12rpx;
-  margin-top: 12rpx;
   flex-wrap: wrap;
+  margin-bottom: 16rpx;
 }
 
-.tag-orange {
+.tag-glow {
   font-size: 22rpx;
-  color: #E86A17;
-  background: #FFF5EC;
-  padding: 6rpx 14rpx;
-  border-radius: 6rpx;
+  color: $accent-gold;
+  background: rgba(217, 154, 46, 0.1);
+  border: 1rpx solid rgba(217, 154, 46, 0.22);
+  padding: 6rpx 16rpx;
+  border-radius: $radius-pill;
 }
 
-.tag-green {
-  font-size: 22rpx;
-  color: #2D9D78;
-  background: #EDF8F4;
-  padding: 6rpx 14rpx;
-  border-radius: 6rpx;
-}
-
+/* 元信息 + 领取按钮 */
 .product-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 12rpx;
+  margin-top: 4rpx;
 }
 
 .meta-items {
   display: flex;
   gap: 16rpx;
   flex-wrap: wrap;
+  flex: 1;
 }
 
 .meta-item {
   font-size: 22rpx;
-  color: #AAAAAA;
+  color: $text-secondary;
   padding: 4rpx 0;
 }
 
-.product-commission {
-  margin-top: 8rpx;
-}
-
-.commission-text {
-  font-size: 22rpx;
-  color: #FF4D4F;
-  font-weight: 600;
-  background: #FFF1F0;
-  padding: 4rpx 12rpx;
-  border-radius: 6rpx;
-}
-
 .action-btn {
-  font-size: 24rpx;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #FF6B35, #FF4444);
-  padding: 8rpx 24rpx;
-  border-radius: 24rpx;
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, $accent-primary, $accent-red);
+  padding: 16rpx 36rpx;
+  border-radius: $radius-pill;
   letter-spacing: 2rpx;
   flex-shrink: 0;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.18);
+  text-align: center;
 }
 
 /* ====== 加载/空状态/到底 ====== */
@@ -1183,12 +1369,12 @@ onUnmounted(() => {
 
 .loading-text {
   font-size: 28rpx;
-  color: #999;
+  color: $text-secondary;
 }
 
 .empty-text {
   font-size: 28rpx;
-  color: #BBBBBB;
+  color: rgba(0, 0, 0, 0.3);
 }
 
 /* ====== 底部占位 ====== */
@@ -1196,47 +1382,4 @@ onUnmounted(() => {
   height: 40rpx;
 }
 
-/* ====== 自定义TabBar ====== */
-.custom-tabbar {
-  width: 100%;
-  height: 110rpx;
-  background: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
-  z-index: 10;
-  flex-shrink: 0;
-}
-
-.tabbar-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4rpx;
-  padding: 8rpx 20rpx;
-
-  &.active {
-    .tabbar-icon {
-      transform: scale(1.1);
-    }
-
-    .tabbar-text {
-      color: #4A9FF5;
-      font-weight: 600;
-    }
-  }
-}
-
-.tabbar-icon {
-  font-size: 42rpx;
-  transition: transform 0.2s;
-}
-
-.tabbar-text {
-  font-size: 22rpx;
-  color: #999;
-  transition: color 0.2s;
-}
 </style>

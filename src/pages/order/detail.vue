@@ -309,8 +309,8 @@ function goBack() {
     font-size: 20rpx;
     padding: 3rpx 12rpx;
     border-radius: 6rpx;
-    background: #E8F4FD;
-    color: #4A9FF5;
+    background: #EDF2FF;
+    color: #5B8DEF;
     font-weight: 600;
 }
 

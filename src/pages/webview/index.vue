@@ -110,7 +110,7 @@ onBackPress(() => {
   display: flex;
   align-items: center;
   padding: 0 12rpx;
-  background: linear-gradient(135deg, #4A9FF5, #6BB6FF);
+  background: linear-gradient(135deg, #5B8DEF, #7B68EE);
   color: #fff;
   flex: 0 0 auto;
   z-index: 10;

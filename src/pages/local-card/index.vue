@@ -2,8 +2,6 @@
 import { ref } from 'vue'
 import { regionData } from '@/utils/regionData.js'
 
-const currentTabbar = ref(2)
-
 // 归属地选择
 const regionValue = ref('')
 
@@ -37,7 +35,7 @@ const localCards = ref([
         tag2: '18-60岁可申请',
         desc: '本地归属，上门激活，京东快递，顺丰快递...',
         soldCount: 64768,
-        color: '#E84545'
+        color: '#E5484D'
     },
     {
         id: 2,
@@ -51,7 +49,7 @@ const localCards = ref([
         tag2: '18-60岁可申请',
         desc: '本地归属，上门激活，京东快递，顺丰快递...',
         soldCount: 31634,
-        color: '#E84545'
+        color: '#E5484D'
     },
     {
         id: 3,
@@ -65,7 +63,7 @@ const localCards = ref([
         tag2: '18-60岁可申请',
         desc: '本地归属，上门激活，京东快递，顺丰快递...',
         soldCount: 44551,
-        color: '#E84545'
+        color: '#E5484D'
     }
 ])
 
@@ -167,27 +165,7 @@ function formatSoldCount(count) {
         </scroll-view>
 
         <!-- 底部导航栏 -->
-        <view class="custom-tabbar">
-            <view class="tabbar-item" :class="{ active: currentTabbar === 0 }"
-                @click="$router.push('/pages/index/index')">
-                <text class="tabbar-icon">🏠</text>
-                <text class="tabbar-text">店铺首页</text>
-            </view>
-            <view class="tabbar-item" :class="{ active: currentTabbar === 1 }"
-                @click="$router.push('/pages/order/index')">
-                <text class="tabbar-icon">📋</text>
-                <text class="tabbar-text">订单查询</text>
-            </view>
-            <view class="tabbar-item" :class="{ active: currentTabbar === 2 }">
-                <text class="tabbar-icon">👤</text>
-                <text class="tabbar-text">本地号卡</text>
-            </view>
-            <view class="tabbar-item" :class="{ active: currentTabbar === 3 }"
-                @click="$router.push('/pages/customer-service/index')">
-                <text class="tabbar-icon">🎧</text>
-                <text class="tabbar-text">在线客服</text>
-            </view>
-        </view>
+        <tab-bar :current="2" />
     </view>
 </template>
 
@@ -225,7 +203,7 @@ function formatSoldCount(count) {
     }
 
     .required {
-        color: #FF4D4F;
+        color: #E5484D;
         font-size: 28rpx;
     }
 }
@@ -263,19 +241,19 @@ function formatSoldCount(count) {
 .delivery-tag {
     padding: 14rpx 28rpx;
     border-radius: 36rpx;
-    border: 2rpx solid #4A9FF5;
+    border: 2rpx solid #5B8DEF;
     background: #FFFFFF;
 
     text {
         font-size: 26rpx;
-        color: #4A9FF5;
+        color: #5B8DEF;
     }
 
     &.active {
-        background: rgba(74, 159, 245, 0.12);
+        background: rgba(91, 141, 239, 0.12);
 
         text {
-            color: #1890FF;
+            color: #5B8DEF;
             font-weight: 500;
         }
     }
@@ -369,17 +347,17 @@ function formatSoldCount(count) {
     .price-num {
         font-size: 36rpx;
         font-weight: 700;
-        color: #E84545;
+        color: #E5484D;
     }
 
     .price-unit {
         font-size: 20rpx;
-        color: #E84545;
+        color: #E5484D;
     }
 
     .local-tag {
         font-size: 18rpx;
-        color: #E84545;
+        color: #E5484D;
         background: rgba(232, 69, 69, 0.1);
         padding: 2rpx 8rpx;
         border-radius: 4rpx;
@@ -470,7 +448,7 @@ function formatSoldCount(count) {
 }
 
 .apply-btn {
-    background: linear-gradient(135deg, #4A9FF5, #81C4FF);
+    background: linear-gradient(135deg, #5B8DEF, #7B68EE);
     padding: 14rpx 32rpx;
     border-radius: 30rpx;
 
@@ -481,44 +459,4 @@ function formatSoldCount(count) {
     }
 }
 
-/* 底部导航栏 */
-.custom-tabbar {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    height: 110rpx;
-    background: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    padding-bottom: env(safe-area-inset-bottom);
-    box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
-    z-index: 100;
-}
-
-.tabbar-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4rpx;
-    padding: 8rpx 20rpx;
-
-    &.active {
-        .tabbar-text {
-            color: #4A9FF5;
-            font-weight: 600;
-        }
-    }
-}
-
-.tabbar-icon {
-    font-size: 40rpx;
-}
-
-.tabbar-text {
-    font-size: 22rpx;
-    color: #999;
-}
 </style>

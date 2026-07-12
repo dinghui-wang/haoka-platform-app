@@ -74,3 +74,43 @@ $uni-color-subtitle: #555; // 二级标题颜色
 $uni-font-size-subtitle: 18px;
 $uni-color-paragraph: #3f536e; // 文章段落颜色
 $uni-font-size-paragraph: 15px;
+
+/* ============================================================
+ * 品牌主色：蓝紫渐变体系（全站统一）
+ * 主按钮 / 头部 / 激活态 / 链接 均以此为基调
+ * ============================================================ */
+$brand-blue: #5B8DEF;                                  // 品牌蓝
+$brand-purple: #7B68EE;                                // 品牌紫
+$brand-gradient: linear-gradient(135deg, #5B8DEF, #7B68EE);
+$brand-gradient-soft: linear-gradient(135deg, #EDF2FF, #E8EBFF);
+$brand-light: #EDF2FF;                                 // 浅蓝底
+$brand-light-2: #E8EBFF;                               // 浅紫底
+$brand-shadow: rgba(91, 141, 239, 0.25);               // 品牌投影
+
+/* 语义色（统一规范，避免一色多值） */
+$semantic-success: #52C41A;                            // 成功/可用
+$semantic-warning: #FA8C16;                            // 警示/优惠
+$semantic-error: #E5484D;                              // 错误/危险
+
+/* ============================================================
+ * 通用主题变量（页面基底 / 卡片 / 圆角 / 文字）
+ * 原散落于各页面 <style scoped> 中，现统一收口于此集中管理。
+ * uni.scss 会被自动注入每个 .vue 的 <style> 块，无需手动 import。
+ * ============================================================ */
+$page-bg: #F5F6FA;                                     // 页面底色
+$card-bg: #FFFFFF;                                     // 卡片底色
+$card-border: rgba(0, 0, 0, 0.06);                     // 卡片描边
+$card-glow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);          // 卡片柔光投影
+
+$radius-card: 32rpx;                                   // 卡片圆角
+$radius-btn: 32rpx;                                    // 按钮圆角
+$radius-pill: 999rpx;                                  // 胶囊圆角
+
+$text-primary: #1F1F24;                                // 主文字
+$text-secondary: rgba(0, 0, 0, 0.45);                  // 次文字
+
+/* 首页强调色：直接引用品牌色，保证单一来源、避免同色多值 */
+$accent-primary: $brand-blue;                          // 主强调（= 品牌蓝）
+$accent-secondary: $brand-purple;                      // 次强调（= 品牌紫）
+$accent-red: $brand-purple;                            // 强调红（统一为紫系）
+$accent-gold: #8E7BF0;                                 // 强调金（紫调）

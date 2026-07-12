@@ -6,8 +6,6 @@ import {
   encodeOrderToUrl,
 } from '@/api/order.js'
 
-const currentTabbar = ref(1)
-
 // 搜索
 const phone = ref('')
 const searching = ref(false)
@@ -226,23 +224,7 @@ function goDetail(order) {
     </view>
 
     <!-- 底部导航栏 -->
-    <view class="custom-tabbar">
-      <view class="tabbar-item" :class="{ active: currentTabbar === 0 }"
-        @click="uni.redirectTo({ url: '/pages/index/index' })">
-        <text class="tb-icon">🏠</text><text class="tb-text">首页</text>
-      </view>
-      <view class="tabbar-item active">
-        <text class="tb-icon">📋</text><text class="tb-text">订单</text>
-      </view>
-      <view class="tabbar-item" :class="{ active: currentTabbar === 2 }"
-        @click="uni.redirectTo({ url: '/pages/local-card/index' })">
-        <text class="tb-icon">👤</text><text class="tb-text">本地号卡</text>
-      </view>
-      <view class="tabbar-item" :class="{ active: currentTabbar === 3 }"
-        @click="uni.redirectTo({ url: '/pages/customer-service/index' })">
-        <text class="tb-icon">🎧</text><text class="tb-text">客服</text>
-      </view>
-    </view>
+    <tab-bar :current="1" />
   </view>
 </template>
 
@@ -258,7 +240,7 @@ function goDetail(order) {
 /* ========== 渐变头部 ========== */
 .header-area {
   position: relative;
-  background: linear-gradient(160deg, #5B8DEF 0%, #7B68EE 50%, #9B59D0 100%);
+  background: linear-gradient(135deg, #5B8DEF, #7B68EE);
   padding: 80rpx 32rpx 60rpx;
   overflow: hidden;
 }
@@ -587,8 +569,8 @@ function goDetail(order) {
   color: #888;
 
   &.phone {
-    background: #E8F4FD;
-    color: #4A9FF5;
+    background: #EDF2FF;
+    color: #5B8DEF;
     font-weight: 600;
   }
 }
@@ -699,41 +681,4 @@ function goDetail(order) {
   color: #CCC;
 }
 
-/* ========== 底部导航 ========== */
-.custom-tabbar {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  height: 110rpx;
-  background: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -2rpx 16rpx rgba(0, 0, 0, .06);
-  z-index: 99;
-}
-
-.tabbar-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4rpx;
-
-  &.active .tb-text {
-    color: #7B68EE;
-    font-weight: 600;
-  }
-}
-
-.tb-icon {
-  font-size: 42rpx;
-}
-
-.tb-text {
-  font-size: 21rpx;
-  color: #999;
-}
 </style>

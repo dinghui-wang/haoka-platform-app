@@ -1,8 +1,6 @@
 <script setup>
 import { ref } from 'vue'
 
-const currentTabbar = ref(3)
-
 // 常见问题
 const faqList = ref([
     {
@@ -176,43 +174,10 @@ function copyWechat() {
         </scroll-view>
 
         <!-- 底部导航栏 -->
-        <view class="custom-tabbar">
-            <view class="tabbar-item" v-for="(tab, index) in tabbarItems" :key="index"
-                :class="{ active: currentTabbar === index }" @click="switchTab(index)">
-                <text class="tabbar-icon">{{ tab.icon }}</text>
-                <text class="tabbar-text">{{ tab.text }}</text>
-            </view>
-        </view>
+        <tab-bar :current="3" />
     </view>
 </template>
 
-<script>
-export default {
-    data() {
-        return {
-            tabbarItems: [
-                { icon: '🏠', text: '店铺首页' },
-                { icon: '📋', text: '订单查询' },
-                { icon: '👤', text: '本地号卡' },
-                { icon: '🎧', text: '在线客服' }
-            ]
-        }
-    },
-    methods: {
-        switchTab(index) {
-            if (index === 0) {
-                uni.redirectTo({ url: '/pages/index/index' })
-            } else if (index === 1) {
-                uni.redirectTo({ url: '/pages/order/index' })
-            } else if (index === 2) {
-                uni.redirectTo({ url: '/pages/local-card/index' })
-            } else if (index === 3) {
-                // 当前页面不需要跳转
-            }
-        }
-    }
-}
-</script>
 
 <style lang="scss" scoped>
 .page {
@@ -223,7 +188,7 @@ export default {
 }
 
 .header-bg {
-    background: linear-gradient(180deg, #7BC4F5 0%, #4A9FF5 100%);
+    background: linear-gradient(135deg, #5B8DEF, #7B68EE);
     padding: 60rpx 30rpx 40rpx;
 }
 
@@ -305,7 +270,7 @@ export default {
     flex-shrink: 0;
 
     &.phone {
-        background: linear-gradient(135deg, #4A9FF5, #81C4FF);
+        background: linear-gradient(135deg, #5B8DEF, #7B68EE);
     }
 
     &.wechat {
@@ -437,19 +402,19 @@ export default {
 
 .feedback-btn {
     margin-top: 20rpx;
-    background: linear-gradient(135deg, #4A9FF5, #81C4FF);
+    background: linear-gradient(135deg, #5B8DEF, #7B68EE);
     color: #FFFFFF;
     font-size: 28rpx;
     font-weight: 600;
     text-align: center;
     padding: 20rpx;
     border-radius: 30rpx;
-    box-shadow: 0 4rpx 12rpx rgba(74, 159, 245, 0.3);
+    box-shadow: 0 4rpx 12rpx rgba(91, 141, 239, 0.3);
 }
 
 /* 底部占位 */
 .bottom-placeholder {
-    height: 40rpx;
+    height: calc(130rpx + env(safe-area-inset-bottom));
 }
 
 /* 底部导航栏 */
@@ -478,7 +443,7 @@ export default {
         }
 
         .tabbar-text {
-            color: #4A9FF5;
+            color: #5B8DEF;
             font-weight: 600;
         }
     }

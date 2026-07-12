@@ -22,10 +22,10 @@ export const STATUS_TEXT_MAP = {
 export const STATUS_COLOR_MAP = {
   1: "#E86A17",
   2: "#E86A17",
-  3: "#4A9FF5",
+  3: "#5B8DEF",
   4: "#2D9D78",
   5: "#999999",
-  6: "#4A9FF5",
+  6: "#5B8DEF",
 };
 
 export function getStatusText(status) {
@@ -37,7 +37,7 @@ export function getStatusColor(status, text) {
   if (m) return m;
   const t = text || "";
   if (t.includes("完成") || t.includes("激活")) return "#2D9D78";
-  if (t.includes("发货")) return "#4A9FF5";
+  if (t.includes("发货")) return "#5B8DEF";
   if (t.includes("付款") || t.includes("处理")) return "#E86A17";
   if (t.includes("取消")) return "#999";
   return "#999";
