@@ -226,14 +226,32 @@ function clearKeyword() {
   fetchProducts(true)
 }
 
-// 跳转商品详情（站内中转页）
-// 直接打开 main_link 真实链接；中转页负责"跳转中"反馈 + 上报点击到 Worker
-// H5：location.href 同标签打开 main_link
-// 小程序/App：<web-view> 加载 main_link
+// 跳转商品详情
+// 解析 main_link 的 query（goods_id/agent_id/...），直接构造 h5.yapingkeji.com 落地 URL
+// 跳过 m2026... / mp. 中转（这两层有反盗链、第三方 cookie 拦截，会导致 iframe 空白）
+// h5.yapingkeji.com 允许被嵌、且本身就是同一主域，体验上比 main_link 跳两跳更顺畅
+// 真实合作方域名可通过 setH5Base() 动态调整
+const H5_BASE = 'https://h5.yapingkeji.com/#/pages/detail/index'
+
+function buildH5Url(mainLink) {
+  try {
+    const u = new URL(mainLink)
+    const sp = u.searchParams
+    const qs = ['goods_id', 'agent_id', '__s']  // 按合作方协议带过去
+      .filter((k) => sp.has(k))
+      .map((k) => `${k}=${encodeURIComponent(sp.get(k))}`)
+      .join('&')
+    return qs ? `${H5_BASE}?${qs}` : H5_BASE
+  } catch {
+    return mainLink  // main_link 解析失败时兜底跳原链
+  }
+}
+
 function goDetail(product) {
   if (!product.main_link) return
+  const h5Url = buildH5Url(product.main_link)
   uni.navigateTo({
-    url: `/pages/webview/index?url=${encodeURIComponent(product.main_link)}&id=${encodeURIComponent(product.id || '')}`,
+    url: `/pages/webview/index?url=${encodeURIComponent(h5Url)}&id=${encodeURIComponent(product.id || '')}`,
   })
 }
 
@@ -864,11 +882,10 @@ onUnmounted(() => {
   align-items: center;
   gap: 12rpx;
   background: linear-gradient(90deg, #FFF8F0, #FFFBF5);
-  padding: 20rpx 24rpx;
   border-radius: 12rpx;
   border: 1rpx solid #FFE8D0;
   overflow: hidden;
-  height: 80rpx;
+  height: 60rpx;
 }
 
 .notice-icon {
