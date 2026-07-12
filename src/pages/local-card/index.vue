@@ -458,5 +458,4 @@ function formatSoldCount(count) {
         font-weight: 600;
     }
 }
-
 </style>

@@ -728,6 +728,8 @@ function goNotice() {
 
 /* ====== 主内容区 ====== */
 .main-content {
+  position: relative; /* 建立定位，使其层叠高于波浪装饰 */
+  z-index: 2; /* 高于 .wave-bottom(z-index:1)，避免波浪盖在滚动内容上 */
   flex: 1;
   margin-top: -50rpx;
   overflow-y: auto;
@@ -1258,6 +1260,7 @@ function goNotice() {
 .product-image {
   width: 100%;
   height: 100%;
+  object-fit: cover; /* 兜底：填满整张卡片区，裁掉边缘 */
   background: #EFEFF2;
 }
 

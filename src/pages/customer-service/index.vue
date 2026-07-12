@@ -65,7 +65,7 @@ function copyWechat() {
                         uni.openChatPanel &&
                             uni.openChatPanel({
                                 openId: '',
-                                success: () => {},
+                                success: () => { },
                                 fail: () => {
                                     // 唤起失败不做处理
                                 }

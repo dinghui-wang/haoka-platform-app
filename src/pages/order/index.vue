@@ -680,5 +680,4 @@ function goDetail(order) {
   font-size: 24rpx;
   color: #CCC;
 }
-
 </style>
