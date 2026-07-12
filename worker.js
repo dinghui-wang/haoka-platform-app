@@ -1,9 +1,9 @@
 /**
  * Workers + Assets 入口
  * - 处理 /p/:id 商品详情中转（302 跳转 + 白名单校验）
- * - 其余请求回落到静态资源（SPA 单页回退由 wrangler.toml 的 not_found_handling 处理）
+ * - 其余请求回落到静态资源（SPA 单页回退由 wrangler.jsonc 的 not_found_handling 处理）
  *
- * 部署：wrangler.toml 需配 main = "worker.js"（本文件），再 npx wrangler deploy
+ * 部署：wrangler.jsonc 需配 main = "worker.js"（本文件），再 npx wrangler deploy
  */
 
 const ALLOW_LIST = [
